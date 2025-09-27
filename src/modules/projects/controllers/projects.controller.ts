@@ -18,7 +18,7 @@ import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { mapProjectToEntity } from '../mappers/mapProjectToEntity';
 
-@Controller('admin/projects')
+@Controller('projects')
 @UseGuards(JwtAuthGuard)
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
