@@ -11,10 +11,11 @@ import { memoryStorage } from 'multer';
 import { AuthModule } from './modules/auth/auth.module';
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { AiModule } from './modules/ai/ai.module';
-import { TextToSpeechModule } from './modules/text-to-speech/text-to-speech.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { Project } from './modules/projects/entities/project.entity';
 import { CryptoModule } from './modules/crypto/crypto.module';
+import { ShapingModule } from './modules/shaping/shaping.module';
+import { Shaping } from './modules/shaping/entities/shaping.entity';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { CryptoModule } from './modules/crypto/crypto.module';
           type: 'postgres',
           schema: 'public',
           url: configService.get('DATABASE_URL'),
-          entities: [Project],
+          entities: [Project, Shaping],
           synchronize: false,
           migrationsRun: true,
           migrations: ['dist/migration/*{.ts,.js}'],
@@ -62,6 +63,7 @@ import { CryptoModule } from './modules/crypto/crypto.module';
     AiModule,
     // TextToSpeechModule,
     ProjectsModule,
+    ShapingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
