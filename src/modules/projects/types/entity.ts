@@ -8,6 +8,14 @@ export type ProjectEntity = {
   logoUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  startedAt: Date;
+  status:
+    | 'shaping'
+    | 'analyzing'
+    | 'active'
+    | 'completed'
+    | 'onHold'
+    | 'cancelled';
 };
 
 export const CREATE_PROJECT_SCHEMA = z.object({

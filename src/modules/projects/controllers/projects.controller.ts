@@ -10,7 +10,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ProjectsService } from '../projects.service';
+import { ProjectsService } from '../services/projects.service';
 import { ZodValidationPipe } from '../../../shared/pipes/zod-validation.pipe';
 import { CREATE_PROJECT_SCHEMA, ProjectCreateData } from '../types/entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
@@ -33,6 +33,7 @@ export class ProjectsController {
     const project = await this.projectsService.create({
       ...data,
       userId: user.id,
+      status: 'shaping',
     });
     return mapProjectToEntity(project);
   }

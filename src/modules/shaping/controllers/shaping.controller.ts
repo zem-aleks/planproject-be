@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -14,6 +15,8 @@ import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
 import { ShapingAiService } from '../services/shaping-ai.service';
+import { ProjectsService } from '../../projects/services/projects.service';
+import { PhasesService } from '../../projects/services/phases.service';
 
 @Controller('shaping')
 @UseGuards(JwtAuthGuard)
@@ -21,6 +24,8 @@ export class ShapingController {
   constructor(
     private readonly shapingService: ShapingService,
     private readonly shapingAiService: ShapingAiService,
+    private readonly projectsService: ProjectsService,
+    private readonly phasesService: PhasesService,
   ) {}
 
   @Post(':shapingId')
@@ -49,6 +54,57 @@ export class ShapingController {
     });
 
     return mapShapingToEntity(updatedShaping);
+  }
+
+  @Post(':shapingId/finish')
+  async finishShaping(
+    @Param('shapingId', ParseUUIDPipe) shapingId: string,
+    @AuthUser() user: User,
+  ) {
+    const shaping = await this.shapingService.getOneByIdOrThrow({
+      shapingId,
+      userId: user.id,
+    });
+
+    if (shaping.score < 70) {
+      throw new BadRequestException(
+        'Shaping score must be at least 70 to finish.',
+      );
+    }
+
+    const project = await this.projectsService.getOneById(shaping.projectId);
+    if (!project) {
+      throw new BadRequestException('Project not found.');
+    }
+
+    const details = await this.shapingAiService.summarizeProjectDetails(
+      shaping,
+      project,
+    );
+
+    const updatedProject = await this.projectsService.update({
+      ...project,
+      title: details.projectTitle,
+      description: details.projectDescription,
+      status: 'analyzing',
+    });
+
+    const phases = await this.phasesService.createMany(
+      details.projectPhases.map((phase) => ({
+        projectId: project.id,
+        title: phase.phaseTitle,
+        description: phase.phaseDescription,
+        minDaysNeeded: phase.minDaysNeeded,
+        maxDaysNeeded: phase.maxDaysNeeded,
+        expertiseNeeded: phase.expertiseNeeded,
+        timelineStartDay: phase.timelineStartDay,
+        timelineEndDay: phase.timelineEndDay,
+        status: 'notStarted',
+      })),
+    );
+
+    console.log(details, phases, updatedProject);
+    return details;
   }
 
   @Get('/project/:projectId')

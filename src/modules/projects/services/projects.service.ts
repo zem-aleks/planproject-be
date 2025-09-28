@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Project } from './entities/project.entity';
+import { Project } from '../entities/project.entity';
 
 @Injectable()
 export class ProjectsService {
@@ -11,7 +11,7 @@ export class ProjectsService {
   ) {}
 
   async create(
-    data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>,
+    data: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'startedAt'>,
   ): Promise<Project> {
     return this.repository.save(data);
   }
@@ -24,11 +24,11 @@ export class ProjectsService {
     return this.repository.find({ order: { createdAt: 'DESC' } });
   }
 
-  async getOneById(assistantId: string) {
-    return this.repository.findOne({ where: { id: assistantId } });
+  async getOneById(projectId: string) {
+    return this.repository.findOne({ where: { id: projectId } });
   }
 
-  async softDelete(assistantId: string) {
-    return this.repository.softDelete(assistantId);
+  async softDelete(projectId: string) {
+    return this.repository.softDelete(projectId);
   }
 }

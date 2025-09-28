@@ -24,6 +24,22 @@ export class Project {
   @Column({ nullable: true, type: 'varchar' })
   logoUrl: string | null;
 
+  @Column({ nullable: false, type: 'varchar', default: 'shaping' })
+  status:
+    | 'shaping'
+    | 'analyzing'
+    | 'active'
+    | 'completed'
+    | 'onHold'
+    | 'cancelled';
+
+  @Column({
+    name: 'startedAt',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  startedAt: Date;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 

@@ -16,6 +16,7 @@ import { Project } from './modules/projects/entities/project.entity';
 import { CryptoModule } from './modules/crypto/crypto.module';
 import { ShapingModule } from './modules/shaping/shaping.module';
 import { Shaping } from './modules/shaping/entities/shaping.entity';
+import { Phase } from './modules/projects/entities/phase.entity';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { Shaping } from './modules/shaping/entities/shaping.entity';
           type: 'postgres',
           schema: 'public',
           url: configService.get('DATABASE_URL'),
-          entities: [Project, Shaping],
+          entities: [Project, Shaping, Phase],
           synchronize: false,
           migrationsRun: true,
           migrations: ['dist/migration/*{.ts,.js}'],
