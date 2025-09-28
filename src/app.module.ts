@@ -16,7 +16,8 @@ import { Project } from './modules/projects/entities/project.entity';
 import { CryptoModule } from './modules/crypto/crypto.module';
 import { ShapingModule } from './modules/shaping/shaping.module';
 import { Shaping } from './modules/shaping/entities/shaping.entity';
-import { Phase } from './modules/projects/entities/phase.entity';
+import { Phase } from './modules/phases/entities/phase.entity';
+import { PhasesModule } from './modules/phases/phases.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { Phase } from './modules/projects/entities/phase.entity';
     // TextToSpeechModule,
     ProjectsModule,
     ShapingModule,
+    PhasesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

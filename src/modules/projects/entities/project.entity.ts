@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+// TODO: project context must be summarized
 @Entity()
 export class Project {
   @PrimaryGeneratedColumn('uuid')

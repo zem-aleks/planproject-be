@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -17,6 +16,8 @@ import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { mapProjectToEntity } from '../mappers/mapProjectToEntity';
+import { ProjectByIdPipe } from '../pipes/project-by-id.pipe';
+import { Project } from '../entities/project.entity';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -46,13 +47,8 @@ export class ProjectsController {
   }
 
   @Get(':projectId')
-  async getProject(@Param('projectId', ParseUUIDPipe) projectId: string) {
+  async getProject(@Param('projectId', ProjectByIdPipe) project: Project) {
     // TODO: projects of a user only
-    const project = await this.projectsService.getOneById(projectId);
-    if (!project) {
-      throw new NotFoundException('Project not found');
-    }
-
     return mapProjectToEntity(project);
   }
 
@@ -60,13 +56,8 @@ export class ProjectsController {
   async updateProject(
     @Body(new ZodValidationPipe(CREATE_PROJECT_SCHEMA))
     data: ProjectCreateData,
-    @Param('projectId', ParseUUIDPipe) id: string,
+    @Param('projectId', ProjectByIdPipe) project: Project,
   ) {
-    const project = await this.projectsService.getOneById(id);
-    if (!project) {
-      throw new NotFoundException('Project not found');
-    }
-
     const updatedProject = await this.projectsService.update({
       ...project,
       ...data,

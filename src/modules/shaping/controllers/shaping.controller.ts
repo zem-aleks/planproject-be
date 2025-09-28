@@ -16,7 +16,7 @@ import { User } from '@supabase/supabase-js';
 import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
 import { ShapingAiService } from '../services/shaping-ai.service';
 import { ProjectsService } from '../../projects/services/projects.service';
-import { PhasesService } from '../../projects/services/phases.service';
+import { PhasesService } from '../../phases/services/phases.service';
 
 @Controller('shaping')
 @UseGuards(JwtAuthGuard)
@@ -133,6 +133,7 @@ export class ShapingController {
 
   @Delete(':shapingId')
   async deleteShaping(@Param('shapingId', ParseUUIDPipe) shapingId: string) {
+    // TODO: verify owner
     return this.shapingService.softDelete(shapingId);
   }
 }

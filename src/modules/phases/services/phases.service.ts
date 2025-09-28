@@ -19,15 +19,18 @@ export class PhasesService {
   async createMany(
     data: Array<Omit<Phase, 'id' | 'createdAt' | 'updatedAt'>>,
   ): Promise<Phase[]> {
-    return this.repository.create(data);
+    return this.repository.save(data);
   }
 
   async update(data: Phase): Promise<Phase> {
     return this.repository.save(data);
   }
 
-  async getAll() {
-    return this.repository.find({ order: { createdAt: 'DESC' } });
+  async getAll(projectId: string) {
+    return this.repository.find({
+      where: { projectId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async getOneById(phaseId: string) {
