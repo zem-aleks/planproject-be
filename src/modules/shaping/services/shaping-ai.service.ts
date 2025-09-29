@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Shaping } from '../entities/shaping.entity';
 import { getModel } from '../../ai/models/models';
-import { SystemMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { getLangchainMessages } from '../../ai/helpers/getLangchainMessages';
 import { Project } from '../../projects/entities/project.entity';
@@ -44,14 +44,10 @@ Do not decrease the score. Every answer should be aimed to keep or increase the 
     ]);
   }
 
-  async summarizeProjectDetails(shaping: Shaping, project: Project) {
+  async summarizeProjectPhases(project: Project) {
     const model = getModel('gpt-4.1-mini', 0.5);
     const structuredModel = model.withStructuredOutput(
       z.object({
-        projectTitle: z.string().describe('A concise title for the project'),
-        projectDescription: z
-          .string()
-          .describe('A brief description of the project idea'),
         projectPhases: z
           .array(
             z.object({
@@ -89,15 +85,43 @@ Do not decrease the score. Every answer should be aimed to keep or increase the 
     return structuredModel.invoke([
       new SystemMessage(
         `You are an AI assistant that helps to build a project plan.
-Next messages contain a detailed discussion with a user about their idea.
-You need to transform this discussion into a structured project plan with clear project phases.
-Suggest title and description for the project. User provided such title and description:
-title: ${project.title}
-description: ${project.description || 'no initial description provided'}
+You need to transform all provided data into structured project plan with clear phases.
 
 The plan should be broken down into clear phases, each with its own title and description.
 For each phase, provide a minimal and maximal time estimation in days, as well as a short comma-separated list of expertise needed to complete the phase.
 Remember that the goal is to create a clear and actionable project plan that can be used for further planning and execution.
+`,
+      ),
+      new HumanMessage(`Project title: ${project.title}
+Project description: ${project.description || 'no description'}
+Project idea summary: ${project.summary || 'no summary provided'}
+`),
+    ]);
+  }
+
+  async summarizeProjectDescription(shaping: Shaping, project: Project) {
+    const model = getModel('gpt-4.1-mini', 0.5);
+    const structuredModel = model.withStructuredOutput(
+      z.object({
+        projectTitle: z.string().describe('A concise title for the project'),
+        projectDescription: z
+          .string()
+          .describe('A brief description of the project idea'),
+        projectSummary: z
+          .string()
+          .describe('A concise summary of the project idea'),
+      }),
+    );
+
+    return structuredModel.invoke([
+      new SystemMessage(
+        `There is a conversation between a user and an AI assistant about a project idea.
+Your goal to extract the key information and all available facts from this conversation and summarize it.
+This summary will be used by LLM for further project planning. Optimize it for that.
+Suggest title and description for the project. User provided such title and description:
+
+title: ${project.title}
+description: ${project.description || 'no initial description provided'}
 `,
       ),
       ...getLangchainMessages(shaping.messages),

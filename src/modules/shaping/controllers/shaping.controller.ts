@@ -77,20 +77,22 @@ export class ShapingController {
       throw new BadRequestException('Project not found.');
     }
 
-    const details = await this.shapingAiService.summarizeProjectDetails(
-      shaping,
-      project,
-    );
+    const projectSummary =
+      await this.shapingAiService.summarizeProjectDescription(shaping, project);
 
     const updatedProject = await this.projectsService.update({
       ...project,
-      title: details.projectTitle,
-      description: details.projectDescription,
+      title: projectSummary.projectTitle,
+      description: projectSummary.projectDescription,
+      summary: projectSummary.projectSummary,
       status: 'analyzing',
     });
 
+    const { projectPhases } =
+      await this.shapingAiService.summarizeProjectPhases(updatedProject);
+
     const phases = await this.phasesService.createMany(
-      details.projectPhases.map((phase) => ({
+      projectPhases.map((phase) => ({
         projectId: project.id,
         title: phase.phaseTitle,
         description: phase.phaseDescription,
@@ -103,8 +105,8 @@ export class ShapingController {
       })),
     );
 
-    console.log(details, phases, updatedProject);
-    return details;
+    // TODO: remove it
+    return phases;
   }
 
   @Get('/project/:projectId')

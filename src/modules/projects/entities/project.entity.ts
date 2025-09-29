@@ -23,6 +23,9 @@ export class Project {
   description: string | null;
 
   @Column({ nullable: true, type: 'varchar' })
+  summary: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
   logoUrl: string | null;
 
   @Column({ nullable: false, type: 'varchar', default: 'shaping' })

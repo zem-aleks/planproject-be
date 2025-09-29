@@ -33,6 +33,7 @@ export class ProjectsController {
   ) {
     const project = await this.projectsService.create({
       ...data,
+      summary: null,
       userId: user.id,
       status: 'shaping',
     });
