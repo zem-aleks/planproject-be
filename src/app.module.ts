@@ -18,6 +18,8 @@ import { ShapingModule } from './modules/shaping/shaping.module';
 import { Shaping } from './modules/shaping/entities/shaping.entity';
 import { Phase } from './modules/phases/entities/phase.entity';
 import { PhasesModule } from './modules/phases/phases.module';
+import { MilestonesModule } from './modules/milestones/milestones.module';
+import { Milestone } from './modules/milestones/entities/milestone.entity';
 
 @Module({
   imports: [
@@ -32,7 +34,7 @@ import { PhasesModule } from './modules/phases/phases.module';
           type: 'postgres',
           schema: 'public',
           url: configService.get('DATABASE_URL'),
-          entities: [Project, Shaping, Phase],
+          entities: [Project, Shaping, Phase, Milestone],
           synchronize: false,
           migrationsRun: true,
           migrations: ['dist/migration/*{.ts,.js}'],
@@ -67,6 +69,7 @@ import { PhasesModule } from './modules/phases/phases.module';
     ProjectsModule,
     ShapingModule,
     PhasesModule,
+    MilestonesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

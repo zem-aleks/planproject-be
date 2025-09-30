@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Phase } from '../entities/phase.entity';
@@ -29,12 +29,20 @@ export class PhasesService {
   async getAll(projectId: string) {
     return this.repository.find({
       where: { projectId },
-      order: { createdAt: 'DESC' },
+      order: { timelineStartDay: 'ASC' },
     });
   }
 
   async getOneById(phaseId: string) {
     return this.repository.findOne({ where: { id: phaseId } });
+  }
+
+  async getOneByIdOrThrow(phaseId: string) {
+    const phase = await this.getOneById(phaseId);
+    if (!phase) {
+      throw new NotFoundException('Phase not found');
+    }
+    return phase;
   }
 
   async softDelete(phaseId: string) {

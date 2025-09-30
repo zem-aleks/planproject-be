@@ -24,6 +24,13 @@ export class PhasesController {
     return phases.map(mapPhaseToEntity);
   }
 
+  @Get('view/:phaseId')
+  async getPhase(@Param('phaseId', ParseUUIDPipe) phaseId: string) {
+    // TODO: vverify user
+    const phase = await this.phasesService.getOneByIdOrThrow(phaseId);
+    return mapPhaseToEntity(phase);
+  }
+
   @Delete(':phaseId')
   async deletePhase(@Param('phaseId', ParseUUIDPipe) phaseId: string) {
     // TODO: vverify user

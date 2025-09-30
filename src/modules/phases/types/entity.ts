@@ -8,8 +8,14 @@ export type PhaseEntity = {
   expertiseNeeded: string;
   timelineStartDay: number;
   timelineEndDay: number;
-  status: 'notStarted' | 'inProgress' | 'completed';
+  status: PhaseStatus;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
 };
+
+export type PhaseStatus =
+  | 'building'
+  | 'notStarted'
+  | 'inProgress'
+  | 'completed';

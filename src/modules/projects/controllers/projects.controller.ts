@@ -28,8 +28,7 @@ export class ProjectsController {
   async createProject(
     @Body(new ZodValidationPipe(CREATE_PROJECT_SCHEMA))
     data: ProjectCreateData,
-    @AuthUser()
-    user: User,
+    @AuthUser() user: User,
   ) {
     const project = await this.projectsService.create({
       ...data,

@@ -6,15 +6,15 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { PhaseStatus } from '../types/entity';
+import { MilestoneStatus } from '../types/entity';
 
 @Entity()
-export class Phase {
+export class Milestone {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ nullable: false })
-  projectId: string;
+  phaseId: string;
 
   @Column({ nullable: false })
   title: string;
@@ -22,23 +22,17 @@ export class Phase {
   @Column({ nullable: true, type: 'varchar' })
   description: string;
 
-  @Column({ nullable: true, type: 'int' })
-  minDaysNeeded: number;
+  @Column({ nullable: true, type: 'varchar' })
+  definitionOfDone: string;
 
   @Column({ nullable: true, type: 'int' })
-  maxDaysNeeded: number;
+  daysNeeded: number;
 
-  @Column({ nullable: false })
-  expertiseNeeded: string;
-
-  @Column({ nullable: true, type: 'int' })
-  timelineStartDay: number;
-
-  @Column({ nullable: true, type: 'int' })
-  timelineEndDay: number;
+  @Column({ nullable: false, type: 'int' })
+  orderIndex: number;
 
   @Column({ nullable: false, type: 'varchar', default: 'building' })
-  status: PhaseStatus;
+  status: MilestoneStatus;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

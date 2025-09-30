@@ -101,7 +101,7 @@ export class ShapingController {
         expertiseNeeded: phase.expertiseNeeded,
         timelineStartDay: phase.timelineStartDay,
         timelineEndDay: phase.timelineEndDay,
-        status: 'notStarted',
+        status: 'building',
       })),
     );
 
