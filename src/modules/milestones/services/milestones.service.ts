@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Milestone } from '../entities/milestone.entity';
@@ -35,6 +35,14 @@ export class MilestonesService {
 
   async getOneById(milestoneId: string) {
     return this.repository.findOne({ where: { id: milestoneId } });
+  }
+
+  async getOneByIdOtThrow(milestoneId: string) {
+    const milestone = await this.getOneById(milestoneId);
+    if (!milestone) {
+      throw new NotFoundException('Milestone not found');
+    }
+    return milestone;
   }
 
   async softDelete(milestoneId: string) {
