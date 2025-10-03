@@ -20,8 +20,11 @@ export class ProjectsService {
     return this.repository.save(data);
   }
 
-  async getAll() {
-    return this.repository.find({ order: { createdAt: 'DESC' } });
+  async getAll(userId: string) {
+    return this.repository.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async getOneById(projectId: string) {

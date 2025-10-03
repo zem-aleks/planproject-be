@@ -1,1 +1,1 @@
-export type BucketId = 'recordings';
+export type BucketId = 'logo';

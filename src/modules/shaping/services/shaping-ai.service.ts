@@ -100,7 +100,7 @@ Project idea summary: ${project.summary || 'no summary provided'}
   }
 
   async summarizeProjectDescription(shaping: Shaping, project: Project) {
-    const model = getModel('gpt-4.1-mini', 0.5);
+    const model = getModel('gpt-4o-mini', 0.5);
     const structuredModel = model.withStructuredOutput(
       z.object({
         projectTitle: z.string().describe('A concise title for the project'),
