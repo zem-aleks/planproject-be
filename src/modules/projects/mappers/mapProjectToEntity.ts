@@ -6,7 +6,15 @@ export const mapProjectToEntity = (
   logoFolder: string,
 ): ProjectEntity => {
   return {
-    ...project,
+    id: project.id,
+    title: project.title,
+    description: project.description,
+    status: project.status,
+    startedAt: project.startedAt,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+    userId: project.userId,
+    daysNeeded: project.daysNeeded,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'
         ? project.logoUrl

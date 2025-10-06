@@ -39,6 +39,10 @@ export class ProjectsService {
     return project;
   }
 
+  async getOneByShapingId(shapingId: string) {
+    return this.repository.findOne({ where: { shapingId } });
+  }
+
   async softDelete(projectId: string) {
     return this.repository.softDelete(projectId);
   }

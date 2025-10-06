@@ -5,7 +5,7 @@ import {
   Get,
   Param,
   Patch,
-  Post,
+  Put,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -21,6 +21,8 @@ import { Project } from '../entities/project.entity';
 import { ProjectsAiService } from '../services/projects-ai.service';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
 import { notReachable } from '../../../shared/utils/notReachable';
+import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
+import { UserPipe } from '../../users/pipes/user.pipe';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -35,19 +37,34 @@ export class ProjectsController {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
 
-  @Post()
-  async createProject(
-    @Body(new ZodValidationPipe(CREATE_PROJECT_SCHEMA))
-    data: ProjectCreateData,
-    @AuthUser() user: User,
+  // @Post()
+  // async createProject(
+  //   @Body(new ZodValidationPipe(CREATE_PROJECT_SCHEMA))
+  //   data: ProjectCreateData,
+  //   @AuthUser() user: User,
+  // ) {
+  //   const project = await this.projectsService.create({
+  //     ...data,
+  //     summary: null,
+  //     userId: user.id,
+  //     status: 'shaping',
+  //     daysNeeded: null,
+  //     clientId: null,
+  //   });
+  //   return mapProjectToEntity(project, this.logoPath);
+  // }
+
+  @Put(':projectId')
+  async connectProject(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @CustomRequest(UserPipe)
+    user: User,
   ) {
-    const project = await this.projectsService.create({
-      ...data,
-      summary: null,
+    const connectedProject = await this.projectsService.update({
+      ...project,
       userId: user.id,
-      status: 'shaping',
     });
-    return mapProjectToEntity(project, this.logoPath);
+    return mapProjectToEntity(connectedProject, this.logoPath);
   }
 
   @Get()

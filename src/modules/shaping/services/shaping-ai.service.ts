@@ -13,6 +13,7 @@ export class ShapingAiService {
     const structuredModel = model.withStructuredOutput(
       z.object({
         followUpQuestion: z.string().describe('A short follow-up question'),
+        assistantComment: z.string().describe('Assistant comment'),
         score: z
           .number()
           .describe(
@@ -34,13 +35,23 @@ User provides details about their idea, and you need to:
 7. Remember that the goal is to help the user refine their idea and make it more actionable for project planning.
 8. User may not know an answers to all your questions. You still can increase the score by providing such answer. It means that the project roadmap will require additional research and planning for this part.
 9. Never repeat the questions! Negative or empty answers means that it's additional topic for investigation during the project planning phase.
-10. Once the score reaches 100, ask if a user wants to share some additional details that could help to make the idea even clearer. Also mention that we can start the process of project planing. 
+10. Once the score reaches 100, ask if a user wants to share some additional details that could help to make the idea even clearer. Also mention that we can start the process of project planing.
+11. Don't be stubborn. If the user provides a good answer that helps to increase the score, accept it and move on. If user has no information about some topic, just move on. You can still increase the score by providing good answers to other questions.
 
 Current score: ${shaping.score}
-Do not decrease the score. Every answer should be aimed to keep or increase the score. 
+Do not decrease the score. Every answer should be aimed to keep or increase the score.
+ 
+For assistantComments field provide a short comment that encourages the user to continue, cheers them up, and motivates them to provide more details about their idea.
+It must be friendly and funny. Feel free to make kind jokes and puns. You can mention how the last answer helped to increase the score or not. 
+You can make friendly recommendations here. Keep it always short (1 sentence only).
+Once the score is 100, you can just cheer up and congratulate the user.
+
+Previous Conversation in JSON format: 
+${JSON.stringify(shaping.messages, null, 2)}
+
+Don't repeat questions or comments.
 `,
       ),
-      ...getLangchainMessages(shaping.messages),
     ]);
   }
 
@@ -99,7 +110,7 @@ Project idea summary: ${project.summary || 'no summary provided'}
     ]);
   }
 
-  async summarizeProjectDescription(shaping: Shaping, project: Project) {
+  async summarizeProjectDescription(shaping: Shaping) {
     const model = getModel('gpt-4o-mini', 0.5);
     const structuredModel = model.withStructuredOutput(
       z.object({
@@ -118,10 +129,7 @@ Project idea summary: ${project.summary || 'no summary provided'}
         `There is a conversation between a user and an AI assistant about a project idea.
 Your goal to extract the key information and all available facts from this conversation and summarize it.
 This summary will be used by LLM for further project planning. Optimize it for that.
-Suggest title and description for the project. User provided such title and description:
-
-title: ${project.title}
-description: ${project.description || 'no initial description provided'}
+Suggest title and description for the project.
 `,
       ),
       ...getLangchainMessages(shaping.messages),

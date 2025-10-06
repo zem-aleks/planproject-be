@@ -7,14 +7,22 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-// TODO: project context must be summarized
 @Entity()
 export class Project {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: false })
-  userId: string;
+  @Column({ nullable: true, type: 'varchar' })
+  userId: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  clientId: string | null;
+
+  @Column({ nullable: false, type: 'varchar' })
+  shapingId: string;
+
+  @Column({ nullable: true, type: 'int' })
+  daysNeeded: number | null;
 
   @Column({ nullable: false })
   title: string;

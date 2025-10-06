@@ -21,8 +21,8 @@ export class ShapingService {
     return this.repository.save(data);
   }
 
-  async getAll() {
-    return this.repository.find({ order: { createdAt: 'DESC' } });
+  async getAllByClientId(clientId: string) {
+    return this.repository.find({ where: { clientId } });
   }
 
   async getOneByProjectId({
@@ -55,13 +55,33 @@ export class ShapingService {
     return shaping;
   }
 
+  async getOneByIdAndClientIdOrThrow({
+    shapingId,
+    clientId,
+  }: {
+    shapingId: string;
+    clientId: string;
+  }) {
+    const shaping = await this.repository.findOne({
+      where: { id: shapingId, clientId },
+    });
+
+    if (!shaping) {
+      throw new NotFoundException('Shaping not found');
+    }
+
+    return shaping;
+  }
+
   async addAssistantMessage({
     shaping,
     message,
+    comment,
     score,
   }: {
     shaping: Shaping;
     message: string;
+    comment: string;
     score: number;
   }) {
     const assistantMessageId =
@@ -71,6 +91,7 @@ export class ShapingService {
       id: assistantMessageId,
       role: 'assistant',
       content: message,
+      comment,
     };
 
     return this.repository.save({

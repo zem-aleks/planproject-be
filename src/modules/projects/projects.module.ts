@@ -5,9 +5,10 @@ import { Project } from './entities/project.entity';
 import { ProjectsController } from './controllers/projects.controller';
 import { ProjectsAiService } from './services/projects-ai.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Project]), SupabaseModule],
+  imports: [TypeOrmModule.forFeature([Project]), SupabaseModule, UsersModule],
   controllers: [ProjectsController],
   providers: [ProjectsService, ProjectsAiService],
   exports: [ProjectsService],

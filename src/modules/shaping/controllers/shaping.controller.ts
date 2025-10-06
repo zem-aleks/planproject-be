@@ -13,20 +13,25 @@ import { ShapingService } from '../services/shaping.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
-import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
 import { ShapingAiService } from '../services/shaping-ai.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { PhasesService } from '../../phases/services/phases.service';
+import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
 
 @Controller('shaping')
 @UseGuards(JwtAuthGuard)
 export class ShapingController {
+  readonly logoPath: string;
+
   constructor(
     private readonly shapingService: ShapingService,
     private readonly shapingAiService: ShapingAiService,
     private readonly projectsService: ProjectsService,
     private readonly phasesService: PhasesService,
-  ) {}
+    private readonly storageService: SupabaseStorageService,
+  ) {
+    this.logoPath = this.storageService.getBucketUrl('logo') + '/';
+  }
 
   @Post(':shapingId')
   async addUserMessage(
@@ -47,13 +52,13 @@ export class ShapingController {
     const { followUpQuestion, score } =
       await this.shapingAiService.processShapingData(shapingWithMessage);
 
-    const updatedShaping = await this.shapingService.addAssistantMessage({
-      shaping: shapingWithMessage,
-      message: followUpQuestion,
-      score,
-    });
-
-    return mapShapingToEntity(updatedShaping);
+    // const updatedShaping = await this.shapingService.addAssistantMessage({
+    //   shaping: shapingWithMessage,
+    //   message: followUpQuestion,
+    //   score,
+    // });
+    //
+    // return mapShapingToEntity(updatedShaping);
   }
 
   @Post(':shapingId/finish')
@@ -72,41 +77,41 @@ export class ShapingController {
       );
     }
 
-    const project = await this.projectsService.getOneById(shaping.projectId);
-    if (!project) {
-      throw new BadRequestException('Project not found.');
-    }
-
-    const projectSummary =
-      await this.shapingAiService.summarizeProjectDescription(shaping, project);
-
-    const updatedProject = await this.projectsService.update({
-      ...project,
-      title: projectSummary.projectTitle,
-      description: projectSummary.projectDescription,
-      summary: projectSummary.projectSummary,
-      status: 'analyzing',
-    });
-
-    const { projectPhases } =
-      await this.shapingAiService.summarizeProjectPhases(updatedProject);
-
-    const phases = await this.phasesService.createMany(
-      projectPhases.map((phase) => ({
-        projectId: project.id,
-        title: phase.phaseTitle,
-        description: phase.phaseDescription,
-        minDaysNeeded: phase.minDaysNeeded,
-        maxDaysNeeded: phase.maxDaysNeeded,
-        expertiseNeeded: phase.expertiseNeeded,
-        timelineStartDay: phase.timelineStartDay,
-        timelineEndDay: phase.timelineEndDay,
-        status: 'building',
-      })),
-    );
-
-    // TODO: remove it
-    return phases;
+    // const project = await this.projectsService.getOneById(shaping.projectId);
+    // if (!project) {
+    //   throw new BadRequestException('Project not found.');
+    // }
+    //
+    // const projectSummary =
+    //   await this.shapingAiService.summarizeProjectDescription(shaping, project);
+    //
+    // const updatedProject = await this.projectsService.update({
+    //   ...project,
+    //   title: projectSummary.projectTitle,
+    //   description: projectSummary.projectDescription,
+    //   summary: projectSummary.projectSummary,
+    //   status: 'analyzing',
+    // });
+    //
+    // const { projectPhases } =
+    //   await this.shapingAiService.summarizeProjectPhases(updatedProject);
+    //
+    // const phases = await this.phasesService.createMany(
+    //   projectPhases.map((phase) => ({
+    //     projectId: project.id,
+    //     title: phase.phaseTitle,
+    //     description: phase.phaseDescription,
+    //     minDaysNeeded: phase.minDaysNeeded,
+    //     maxDaysNeeded: phase.maxDaysNeeded,
+    //     expertiseNeeded: phase.expertiseNeeded,
+    //     timelineStartDay: phase.timelineStartDay,
+    //     timelineEndDay: phase.timelineEndDay,
+    //     status: 'building',
+    //   })),
+    // );
+    //
+    // // TODO: remove it
+    // return phases;
   }
 
   @Get('/project/:projectId')
@@ -119,18 +124,18 @@ export class ShapingController {
       userId: user.id,
     });
 
-    if (!shaping) {
-      const newShaping = await this.shapingService.create({
-        projectId,
-        userId: user.id,
-        score: 0,
-        messages: [],
-      });
-
-      return mapShapingToEntity(newShaping);
-    }
-
-    return mapShapingToEntity(shaping);
+    // if (!shaping) {
+    //   const newShaping = await this.shapingService.create({
+    //     projectId,
+    //     userId: user.id,
+    //     score: 0,
+    //     messages: [],
+    //   });
+    //
+    //   return mapShapingToEntity(newShaping);
+    // }
+    //
+    // return mapShapingToEntity(shaping);
   }
 
   @Delete(':shapingId')

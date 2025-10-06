@@ -22,6 +22,8 @@ import { MilestonesModule } from './modules/milestones/milestones.module';
 import { Milestone } from './modules/milestones/entities/milestone.entity';
 import { Task } from './modules/tasks/entities/task.entity';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { User } from './modules/users/entities/user.entity';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -36,7 +38,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
           type: 'postgres',
           schema: 'public',
           url: configService.get('DATABASE_URL'),
-          entities: [Project, Shaping, Phase, Milestone, Task],
+          entities: [Project, Shaping, Phase, Milestone, Task, User],
           synchronize: false,
           migrationsRun: true,
           migrations: ['dist/migration/*{.ts,.js}'],
@@ -73,6 +75,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
     PhasesModule,
     MilestonesModule,
     TasksModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

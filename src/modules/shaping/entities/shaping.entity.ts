@@ -13,17 +13,23 @@ export class Shaping {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: false })
-  userId: string;
+  @Column({ nullable: false, type: 'varchar' })
+  clientId: string;
 
-  @Column({ nullable: false })
-  projectId: string;
+  @Column({ nullable: true, type: 'varchar' })
+  userId: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  projectId: string | null;
 
   @Column({ nullable: false, type: 'simple-json' })
   messages: ShapeMessage[];
 
   @Column({ nullable: false, default: 0 })
   score: number;
+
+  @Column({ nullable: false, default: 'started' })
+  status: 'started' | 'processing' | 'finished' | 'error';
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

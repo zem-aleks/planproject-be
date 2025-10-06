@@ -2,10 +2,11 @@ import { z } from 'zod';
 
 export type ProjectEntity = {
   id: string;
-  userId: string;
+  userId: string | null;
   title: string;
   description: string | null;
   logoUrl: string | null;
+  daysNeeded: number | null;
   createdAt: Date;
   updatedAt: Date;
   startedAt: Date;
