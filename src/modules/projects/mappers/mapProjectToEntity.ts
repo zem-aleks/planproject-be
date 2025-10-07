@@ -14,6 +14,7 @@ export const mapProjectToEntity = (
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
     userId: project.userId,
+    shapingId: project.shapingId,
     daysNeeded: project.daysNeeded,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'

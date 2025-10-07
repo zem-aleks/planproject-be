@@ -17,7 +17,7 @@ export class PhasesService {
   }
 
   async createMany(
-    data: Array<Omit<Phase, 'id' | 'createdAt' | 'updatedAt'>>,
+    data: Array<Omit<Phase, 'id' | 'createdAt' | 'updatedAt' | 'milestones'>>,
   ): Promise<Phase[]> {
     return this.repository.save(data);
   }
@@ -30,6 +30,14 @@ export class PhasesService {
     return this.repository.find({
       where: { projectId },
       order: { timelineStartDay: 'ASC' },
+    });
+  }
+
+  async getAllWithMilestones(projectId: string) {
+    return this.repository.find({
+      where: { projectId },
+      order: { timelineStartDay: 'ASC' },
+      relations: ['milestones'],
     });
   }
 

@@ -3,10 +3,12 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { PhaseStatus } from '../types/entity';
+import { Milestone } from '../../milestones/entities/milestone.entity';
 
 @Entity()
 export class Phase {
@@ -48,4 +50,10 @@ export class Phase {
 
   @DeleteDateColumn()
   deletedAt?: Date;
+
+  @OneToMany(() => Milestone, (milestone) => milestone.phase, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  milestones: Milestone[];
 }

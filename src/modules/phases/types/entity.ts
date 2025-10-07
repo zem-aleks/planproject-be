@@ -1,3 +1,5 @@
+import { MilestoneEntity } from '../../milestones/types/entity';
+
 export type PhaseEntity = {
   id: string;
   projectId: string;
@@ -12,6 +14,10 @@ export type PhaseEntity = {
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
+};
+
+export type PhaseEntityWithMilestones = PhaseEntity & {
+  milestones: MilestoneEntity[];
 };
 
 export type PhaseStatus =

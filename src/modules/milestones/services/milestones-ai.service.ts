@@ -73,7 +73,6 @@ For each milestone, provide:
 - definitionOfDone: A clear definition of done for this milestone. When can this milestone be considered as done
 - orderIndex: The order index of the milestone within the phase
 
-Provide at least 3 milestones for this phase.
 Make sure that the total daysNeeded for all milestones does not exceed ${phase.maxDaysNeeded} days.
 Make sure that the total daysNeeded for all milestones is at least ${phase.minDaysNeeded} days.
 `,

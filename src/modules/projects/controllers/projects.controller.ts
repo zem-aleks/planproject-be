@@ -5,7 +5,6 @@ import {
   Get,
   Param,
   Patch,
-  Put,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -21,8 +20,6 @@ import { Project } from '../entities/project.entity';
 import { ProjectsAiService } from '../services/projects-ai.service';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
 import { notReachable } from '../../../shared/utils/notReachable';
-import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
-import { UserPipe } from '../../users/pipes/user.pipe';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -53,19 +50,6 @@ export class ProjectsController {
   //   });
   //   return mapProjectToEntity(project, this.logoPath);
   // }
-
-  @Put(':projectId')
-  async connectProject(
-    @Param('projectId', ProjectByIdPipe) project: Project,
-    @CustomRequest(UserPipe)
-    user: User,
-  ) {
-    const connectedProject = await this.projectsService.update({
-      ...project,
-      userId: user.id,
-    });
-    return mapProjectToEntity(connectedProject, this.logoPath);
-  }
 
   @Get()
   async getProjects(@AuthUser() user: User) {

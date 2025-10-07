@@ -16,6 +16,7 @@ import { ProjectsService } from '../../projects/services/projects.service';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { MilestonesAiService } from '../services/milestones-ai.service';
+import { mapPhaseToEntityWithMilestones } from '../../phases/mappers/mapPhaseToEntity';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -63,13 +64,15 @@ export class MilestonesController {
       })),
     );
 
-    console.log(phaseMilestones);
     const updatedPhase = await this.phasesService.update({
       ...phase,
       status: 'notStarted',
     });
 
-    return updatedPhase;
+    return mapPhaseToEntityWithMilestones({
+      ...updatedPhase,
+      milestones: phaseMilestones,
+    });
   }
 
   @Delete(':milestoneId')

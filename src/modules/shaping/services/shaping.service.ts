@@ -37,6 +37,12 @@ export class ShapingService {
     });
   }
 
+  async getOneById(shapingId: string) {
+    return this.repository.findOne({
+      where: { id: shapingId },
+    });
+  }
+
   async getOneByIdOrThrow({
     shapingId,
     userId,

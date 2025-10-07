@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { ShapingService } from '../services/shaping.service';
@@ -17,6 +18,11 @@ import { ShapingAiService } from '../services/shaping-ai.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { PhasesService } from '../../phases/services/phases.service';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
+import { mapProjectToEntity } from '../../projects/mappers/mapProjectToEntity';
+import { ProjectByIdPipe } from '../../projects/pipes/project-by-id.pipe';
+import { Project } from '../../projects/entities/project.entity';
+import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
+import { UserPipe } from '../../users/pipes/user.pipe';
 
 @Controller('shaping')
 @UseGuards(JwtAuthGuard)
@@ -64,6 +70,31 @@ export class ShapingController {
     // return mapShapingToEntity(updatedShaping);
   }
 
+  @Put(':projectId/connect')
+  async connectProject(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @CustomRequest(UserPipe) user: User,
+  ) {
+    const connectedProject = await this.projectsService.update({
+      ...project,
+      userId: user.id,
+    });
+
+    const shaping = await this.shapingService.getOneById(
+      connectedProject.shapingId,
+    );
+    if (!shaping) {
+      throw new BadRequestException('Shaping not found for this project.');
+    }
+
+    await this.shapingService.update({
+      ...shaping,
+      projectId: connectedProject.id,
+      userId: user.id,
+    });
+    return mapProjectToEntity(connectedProject, this.logoPath);
+  }
+
   @Post(':shapingId/finish')
   async finishShaping(
     @Param('shapingId', ParseUUIDPipe) shapingId: string,
@@ -80,41 +111,42 @@ export class ShapingController {
       );
     }
 
-    // const project = await this.projectsService.getOneById(shaping.projectId);
-    // if (!project) {
-    //   throw new BadRequestException('Project not found.');
-    // }
-    //
-    // const projectSummary =
-    //   await this.shapingAiService.summarizeProjectDescription(shaping, project);
-    //
-    // const updatedProject = await this.projectsService.update({
-    //   ...project,
-    //   title: projectSummary.projectTitle,
-    //   description: projectSummary.projectDescription,
-    //   summary: projectSummary.projectSummary,
-    //   status: 'analyzing',
-    // });
-    //
-    // const { projectPhases } =
-    //   await this.shapingAiService.summarizeProjectPhases(updatedProject);
-    //
-    // const phases = await this.phasesService.createMany(
-    //   projectPhases.map((phase) => ({
-    //     projectId: project.id,
-    //     title: phase.phaseTitle,
-    //     description: phase.phaseDescription,
-    //     minDaysNeeded: phase.minDaysNeeded,
-    //     maxDaysNeeded: phase.maxDaysNeeded,
-    //     expertiseNeeded: phase.expertiseNeeded,
-    //     timelineStartDay: phase.timelineStartDay,
-    //     timelineEndDay: phase.timelineEndDay,
-    //     status: 'building',
-    //   })),
-    // );
-    //
-    // // TODO: remove it
-    // return phases;
+    if (!shaping.projectId) {
+      throw new BadRequestException(
+        'Shaping must be associated with a project to finish.',
+      );
+    }
+
+    const project = await this.projectsService.getOneById(shaping.projectId);
+    if (!project) {
+      throw new BadRequestException('Project not found.');
+    }
+
+    const { projectPhases } =
+      await this.shapingAiService.summarizeProjectPhases(project);
+
+    const phases = await this.phasesService.createMany(
+      projectPhases.map((phase) => ({
+        projectId: project.id,
+        title: phase.phaseTitle,
+        description: phase.phaseDescription,
+        minDaysNeeded: phase.minDaysNeeded,
+        maxDaysNeeded: phase.maxDaysNeeded,
+        expertiseNeeded: phase.expertiseNeeded,
+        timelineStartDay: phase.timelineStartDay,
+        timelineEndDay: phase.timelineEndDay,
+        status: 'building',
+      })),
+    );
+
+    const endOfTimeline = Math.max(...phases.map((p) => p.timelineEndDay), 0);
+    const newProject = await this.projectsService.update({
+      ...project,
+      daysNeeded: endOfTimeline,
+      status: 'analyzing',
+    });
+
+    return mapProjectToEntity(newProject, this.logoPath);
   }
 
   @Get('/project/:projectId')

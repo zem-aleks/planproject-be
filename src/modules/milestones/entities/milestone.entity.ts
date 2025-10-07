@@ -3,16 +3,20 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  Index,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { MilestoneStatus } from '../types/entity';
+import { Phase } from '../../phases/entities/phase.entity';
 
 @Entity()
 export class Milestone {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ nullable: false })
   phaseId: string;
 
@@ -42,4 +46,10 @@ export class Milestone {
 
   @DeleteDateColumn()
   deletedAt?: Date;
+
+  @ManyToOne(() => Phase, (phase) => phase.milestones, {
+    onDelete: 'CASCADE', // delete messages when their chat is deleted
+    nullable: false,
+  })
+  phase: Phase;
 }

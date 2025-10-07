@@ -3,6 +3,7 @@ import { z } from 'zod';
 export type ProjectEntity = {
   id: string;
   userId: string | null;
+  shapingId: string;
   title: string;
   description: string | null;
   logoUrl: string | null;
