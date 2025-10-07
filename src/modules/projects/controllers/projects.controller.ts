@@ -20,6 +20,7 @@ import { Project } from '../entities/project.entity';
 import { ProjectsAiService } from '../services/projects-ai.service';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
 import { notReachable } from '../../../shared/utils/notReachable';
+import { PhasesService } from '../../phases/services/phases.service';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -28,6 +29,7 @@ export class ProjectsController {
 
   constructor(
     private readonly projectsService: ProjectsService,
+    private readonly phasesService: PhasesService,
     private readonly projectsAiService: ProjectsAiService,
     private readonly storageService: SupabaseStorageService,
   ) {
@@ -50,6 +52,37 @@ export class ProjectsController {
   //   });
   //   return mapProjectToEntity(project, this.logoPath);
   // }
+
+  @Patch(':projectId/start')
+  async startProject(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const updatedProject = await this.projectsService.update({
+      ...project,
+      status: 'active',
+      startedAt: new Date(),
+    });
+
+    const phases = await this.phasesService.getAllWithMilestones(project.id);
+    if (phases.length > 0) {
+      const { milestones, ...phase } = phases[0];
+      await this.phasesService.update({
+        ...phase,
+        status: 'inProgress',
+        milestones: milestones.map((milestone) => ({
+          ...milestone,
+          status: milestone.orderIndex === 1 ? 'inProgress' : 'notStarted',
+        })),
+      });
+    }
+
+    return mapProjectToEntity(updatedProject, this.logoPath);
+  }
 
   @Get()
   async getProjects(@AuthUser() user: User) {
