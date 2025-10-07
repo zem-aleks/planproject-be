@@ -50,7 +50,10 @@ export class ShapingController {
     });
 
     const { followUpQuestion, score } =
-      await this.shapingAiService.processShapingData(shapingWithMessage);
+      await this.shapingAiService.processShapingData(
+        shapingWithMessage,
+        'gpt-4o-mini',
+      );
 
     // const updatedShaping = await this.shapingService.addAssistantMessage({
     //   shaping: shapingWithMessage,

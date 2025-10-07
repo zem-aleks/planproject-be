@@ -15,6 +15,7 @@ import { ShapingAiService } from '../services/shaping-ai.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { mapProjectToEntity } from '../../projects/mappers/mapProjectToEntity';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
+import { PhasesService } from '../../phases/services/phases.service';
 
 @Controller('start')
 export class ShapingPublicController {
@@ -25,6 +26,7 @@ export class ShapingPublicController {
     private readonly shapingAiService: ShapingAiService,
     private readonly projectsService: ProjectsService,
     private readonly storageService: SupabaseStorageService,
+    private readonly phasesService: PhasesService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
@@ -61,7 +63,7 @@ export class ShapingPublicController {
     });
 
     const { followUpQuestion, assistantComment, score } =
-      await this.shapingAiService.processShapingData(shaping);
+      await this.shapingAiService.processShapingData(shaping, 'gpt-4o-mini');
 
     const updatedShaping = await this.shapingService.addAssistantMessage({
       shaping,
@@ -137,7 +139,31 @@ export class ShapingPublicController {
       status: 'finished',
     });
 
-    return mapProjectToEntity(project, this.logoPath);
+    const { projectPhases } =
+      await this.shapingAiService.summarizeProjectPhases(project);
+
+    const phases = await this.phasesService.createMany(
+      projectPhases.map((phase) => ({
+        projectId: project.id,
+        title: phase.phaseTitle,
+        description: phase.phaseDescription,
+        minDaysNeeded: phase.minDaysNeeded,
+        maxDaysNeeded: phase.maxDaysNeeded,
+        expertiseNeeded: phase.expertiseNeeded,
+        timelineStartDay: phase.timelineStartDay,
+        timelineEndDay: phase.timelineEndDay,
+        status: 'building',
+      })),
+    );
+
+    const endOfTimeline = Math.max(...phases.map((p) => p.timelineEndDay), 0);
+    const newProject = await this.projectsService.update({
+      ...project,
+      daysNeeded: endOfTimeline,
+      status: 'analyzing',
+    });
+
+    return mapProjectToEntity(newProject, this.logoPath);
   }
 
   @Post(':shapingId')
@@ -157,7 +183,10 @@ export class ShapingPublicController {
     });
 
     const { followUpQuestion, score, assistantComment } =
-      await this.shapingAiService.processShapingData(shapingWithMessage);
+      await this.shapingAiService.processShapingData(
+        shapingWithMessage,
+        'gpt-4o-mini',
+      );
 
     const updatedShaping = await this.shapingService.addAssistantMessage({
       shaping: shapingWithMessage,

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Shaping } from '../entities/shaping.entity';
-import { getModel } from '../../ai/models/models';
+import { getModel, ModelType } from '../../ai/models/models';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { getLangchainMessages } from '../../ai/helpers/getLangchainMessages';
@@ -8,8 +8,8 @@ import { Project } from '../../projects/entities/project.entity';
 
 @Injectable()
 export class ShapingAiService {
-  async processShapingData(shaping: Shaping) {
-    const model = getModel('gpt-4.1-mini', 0.5);
+  async processShapingData(shaping: Shaping, modelType: ModelType) {
+    const model = getModel(modelType, 0.5);
     const structuredModel = model.withStructuredOutput(
       z.object({
         followUpQuestion: z.string().describe('A short follow-up question'),
@@ -49,7 +49,8 @@ Once the score is 100, you can just cheer up and congratulate the user.
 Previous Conversation in JSON format: 
 ${JSON.stringify(shaping.messages, null, 2)}
 
-Don't repeat questions or comments.
+Don't repeat questions or comments. Try to finish conversation in 5 turns maximum.
+If it's not needed don't drill down into details a lot. It could be done during the project planning phase.
 `,
       ),
     ]);
@@ -68,10 +69,10 @@ Don't repeat questions or comments.
                 .describe('Description of the project phase'),
               minDaysNeeded: z
                 .number()
-                .describe('Minimal time estimation in days'),
+                .describe('Minimal time estimation in calendar days'),
               maxDaysNeeded: z
                 .number()
-                .describe('Maximal time estimation in days'),
+                .describe('Maximal time estimation in calendar days'),
               expertiseNeeded: z
                 .string()
                 .describe(
