@@ -4,10 +4,12 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
   Put,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ShapingService } from '../services/shaping.service';
@@ -23,6 +25,8 @@ import { ProjectByIdPipe } from '../../projects/pipes/project-by-id.pipe';
 import { Project } from '../../projects/entities/project.entity';
 import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../users/pipes/user.pipe';
+import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
+import * as dayjs from 'dayjs';
 
 @Controller('shaping')
 @UseGuards(JwtAuthGuard)
@@ -37,6 +41,67 @@ export class ShapingController {
     private readonly storageService: SupabaseStorageService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
+  }
+
+  @Post()
+  async createShaping(
+    @Body('message') message: string,
+    @Body('clientId', ParseUUIDPipe) clientId: string,
+    @AuthUser() user: User,
+  ) {
+    if (!message || message.trim().length === 0) {
+      throw new BadRequestException('Message is required');
+    }
+
+    // TODO: verify if new shaping can be created
+
+    const projectName = `New project (${dayjs().format('YYYY-MM-DD HH:mm')})`;
+    const shaping = await this.shapingService.create({
+      projectId: null,
+      userId: user.id,
+      clientId,
+      messages: [
+        {
+          id: 1,
+          role: 'user',
+          content: message,
+        },
+      ],
+      score: 0,
+      status: 'started',
+    });
+
+    const project = await this.projectsService.create({
+      title: projectName,
+      clientId,
+      shapingId: shaping.id,
+      userId: user.id,
+      status: 'draft',
+      description: null,
+      summary: null,
+      logoUrl: null,
+      daysNeeded: null,
+    });
+
+    const updatedShaping = await this.shapingService.update({
+      ...shaping,
+      projectId: project.id,
+    });
+
+    const { followUpQuestion, assistantComment, score } =
+      await this.shapingAiService.processShapingData(
+        updatedShaping,
+        'gpt-4o-mini',
+      );
+
+    const shapingWithMessage = await this.shapingService.addAssistantMessage({
+      shaping: updatedShaping,
+      message: followUpQuestion,
+      comment: assistantComment,
+      score,
+    });
+
+    return mapShapingToEntity(shapingWithMessage);
   }
 
   @Post(':shapingId')
@@ -55,19 +120,20 @@ export class ShapingController {
       shaping,
     });
 
-    const { followUpQuestion, score } =
+    const { followUpQuestion, score, assistantComment } =
       await this.shapingAiService.processShapingData(
         shapingWithMessage,
         'gpt-4o-mini',
       );
 
-    // const updatedShaping = await this.shapingService.addAssistantMessage({
-    //   shaping: shapingWithMessage,
-    //   message: followUpQuestion,
-    //   score,
-    // });
-    //
-    // return mapShapingToEntity(updatedShaping);
+    const updatedShaping = await this.shapingService.addAssistantMessage({
+      shaping: shapingWithMessage,
+      message: followUpQuestion,
+      comment: assistantComment,
+      score,
+    });
+
+    return mapShapingToEntity(updatedShaping);
   }
 
   @Put(':projectId/connect')
@@ -122,8 +188,26 @@ export class ShapingController {
       throw new BadRequestException('Project not found.');
     }
 
+    const projectSummary =
+      await this.shapingAiService.summarizeProjectDescription(shaping);
+
+    const updatedProject = await this.projectsService.update({
+      ...project,
+      title: projectSummary.projectTitle,
+      description: projectSummary.projectDescription,
+      summary: projectSummary.projectSummary,
+      clientId: shaping.clientId,
+      shapingId: shaping.id,
+      status: 'shaping',
+    });
+
+    await this.shapingService.update({
+      ...shaping,
+      status: 'finished',
+    });
+
     const { projectPhases } =
-      await this.shapingAiService.summarizeProjectPhases(project);
+      await this.shapingAiService.summarizeProjectPhases(updatedProject);
 
     const phases = await this.phasesService.createMany(
       projectPhases.map((phase) => ({
@@ -142,7 +226,7 @@ export class ShapingController {
 
     const endOfTimeline = Math.max(...phases.map((p) => p.timelineEndDay), 0);
     const newProject = await this.projectsService.update({
-      ...project,
+      ...updatedProject,
       daysNeeded: endOfTimeline,
       status: 'analyzing',
     });
@@ -152,13 +236,23 @@ export class ShapingController {
 
   @Get('/project/:projectId')
   async getShaping(
-    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('projectId', ProjectByIdPipe) project: Project,
     @AuthUser() user: User,
   ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException(
+        'You do not have access to this project.',
+      );
+    }
+
     const shaping = await this.shapingService.getOneByProjectId({
-      projectId,
+      projectId: project.id,
       userId: user.id,
     });
+
+    if (!shaping) {
+      throw new NotFoundException('Shaping not found for this project.');
+    }
 
     // if (!shaping) {
     //   const newShaping = await this.shapingService.create({
@@ -171,7 +265,7 @@ export class ShapingController {
     //   return mapShapingToEntity(newShaping);
     // }
     //
-    // return mapShapingToEntity(shaping);
+    return mapShapingToEntity(shaping);
   }
 
   @Delete(':shapingId')

@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Shaping } from '../entities/shaping.entity';
 import { getModel, ModelType } from '../../ai/models/models';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import {
+  AIMessage,
+  HumanMessage,
+  SystemMessage,
+} from '@langchain/core/messages';
 import { z } from 'zod';
 import { getLangchainMessages } from '../../ai/helpers/getLangchainMessages';
 import { Project } from '../../projects/entities/project.entity';
@@ -22,21 +26,30 @@ export class ShapingAiService {
       }),
     );
 
+    const langchainMessages = shaping.messages.map((m) => {
+      if (m.role === 'user') {
+        return new HumanMessage(`[user_input]${m.content}[end_of_user_input]`);
+      }
+
+      return new AIMessage(
+        `Follow-up question: ${m.content}. Comment: ${m.comment}`,
+      );
+    });
+
     return structuredModel.invoke([
       new SystemMessage(
         `You are an AI assistant that helps to shape user idea into a clear path on how to make a project.
 User provides details about their idea, and you need to:
-1. Ask a follow-up question to clarify the idea and make it clearer.
+1. Ask a follow-up question to clarify the idea
 2. Provide a score from 0 to 100 indicating how well the user idea is described.
 3. Take a look at the idea from different perspectives: technical feasibility, market demand, user experience, and potential challenges.
-4. Provide constructive feedback on how to improve the idea description.
-5. Help to identify any gaps or missing information that could be crucial for the project planning.
+4. Try to help the user by adding some context into follow-up question.
+5. Follow-up question must be short and to the point. It should be easy to understand and answer.
 6. Consider that project planing may require details about the available resources and timeline
-7. Remember that the goal is to help the user refine their idea and make it more actionable for project planning.
-8. User may not know an answers to all your questions. You still can increase the score by providing such answer. It means that the project roadmap will require additional research and planning for this part.
-9. Never repeat the questions! Negative or empty answers means that it's additional topic for investigation during the project planning phase.
-10. Once the score reaches 100, ask if a user wants to share some additional details that could help to make the idea even clearer. Also mention that we can start the process of project planing.
-11. Don't be stubborn. If the user provides a good answer that helps to increase the score, accept it and move on. If user has no information about some topic, just move on. You can still increase the score by providing good answers to other questions.
+7. User may not know an answers to all your questions. You still can increase the score by providing such answer. It means that the project roadmap will require additional research and planning for this part.
+8. Never repeat the questions! Negative or empty answers means that it's additional topic for investigation during the project planning phase.
+9. Once the score reaches 100, ask if a user wants to share some additional details that could help to make the idea even clearer. Also mention that we can start the process of project planing.
+10. Don't be stubborn. If the user provides a good answer that helps to increase the score, accept it and move on. If user has no information about some topic, just move on. You can still increase the score by providing good answers to other questions.
 
 Current score: ${shaping.score}
 Do not decrease the score. Every answer should be aimed to keep or increase the score.
@@ -46,13 +59,14 @@ It must be friendly and funny. Feel free to make kind jokes and puns. You can me
 You can make friendly recommendations here. Keep it always short (1 sentence only).
 Once the score is 100, you can just cheer up and congratulate the user.
 
-Previous Conversation in JSON format: 
-${JSON.stringify(shaping.messages, null, 2)}
+Current turn is ${shaping.messages.length + 1}. 
 
 Don't repeat questions or comments. Try to finish conversation in 5 turns maximum.
 If it's not needed don't drill down into details a lot. It could be done during the project planning phase.
+Try to challenge different aspects of the idea for 5 turns only.
 `,
       ),
+      ...langchainMessages,
     ]);
   }
 

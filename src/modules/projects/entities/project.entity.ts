@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ProjectStatus } from '../types/entity';
 
 @Entity()
 export class Project {
@@ -37,13 +38,7 @@ export class Project {
   logoUrl: string | null;
 
   @Column({ nullable: false, type: 'varchar', default: 'shaping' })
-  status:
-    | 'shaping'
-    | 'analyzing'
-    | 'active'
-    | 'completed'
-    | 'onHold'
-    | 'cancelled';
+  status: ProjectStatus;
 
   @Column({
     name: 'startedAt',
