@@ -1,9 +1,11 @@
 import {
+  BadRequestException,
   Controller,
   Delete,
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   UnauthorizedException,
   UseGuards,
@@ -17,6 +19,8 @@ import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { MilestonesAiService } from '../services/milestones-ai.service';
 import { mapPhaseToEntityWithMilestones } from '../../phases/mappers/mapPhaseToEntity';
+import { mapTaskToEntity } from '../../tasks/mappers/mapTaskToEntity';
+import { TasksService } from '../../tasks/services/tasks.service';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -26,6 +30,7 @@ export class MilestonesController {
     private readonly milestonesAiService: MilestonesAiService,
     private readonly phasesService: PhasesService,
     private readonly projectsService: ProjectsService,
+    private readonly tasksService: TasksService,
   ) {}
 
   @Get(':phaseId')
@@ -60,6 +65,7 @@ export class MilestonesController {
       milestones.map((milestone) => ({
         ...milestone,
         phaseId: phase.id,
+        projectId: project.id,
         status: 'notStarted',
         startedAt: new Date(),
       })),
@@ -74,6 +80,45 @@ export class MilestonesController {
       ...updatedPhase,
       milestones: phaseMilestones,
     });
+  }
+
+  @Patch(':milestoneId')
+  async startMilestone(
+    @Param('milestoneId', ParseUUIDPipe) milestoneId: string,
+    @AuthUser() user: User,
+  ) {
+    const milestone =
+      await this.milestonesService.getOneByIdOtThrow(milestoneId);
+
+    if (milestone.status !== 'notStarted') {
+      throw new BadRequestException('Milestone already started');
+    }
+
+    const phase = await this.phasesService.getOneByIdOrThrow(milestone.phaseId);
+    const project = await this.projectsService.getOneByIdOrThrow(
+      phase.projectId,
+    );
+
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const tasks = await this.tasksService.generateTasksForMilestone({
+      project,
+      phase,
+      milestone,
+    });
+
+    const updatedMilestone = await this.milestonesService.update({
+      ...milestone,
+      status: 'inProgress',
+      startedAt: new Date(),
+    });
+
+    return {
+      ...updatedMilestone,
+      tasks: tasks.map(mapTaskToEntity),
+    };
   }
 
   @Delete(':milestoneId')

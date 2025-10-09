@@ -2,8 +2,10 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
+  Patch,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -18,11 +20,16 @@ import { Project } from '../../projects/entities/project.entity';
 import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../users/pipes/user.pipe';
 import { User } from '@supabase/supabase-js';
+import { PhaseByIdPipe } from '../pipes/phase-by-id.pipe';
+import { Phase } from '../entities/phase.entity';
 
 @Controller('phases')
 @UseGuards(JwtAuthGuard)
 export class PhasesController {
-  constructor(private readonly phasesService: PhasesService) {}
+  constructor(
+    private readonly phasesService: PhasesService,
+    // private readonly projectsService: ProjectsService,
+  ) {}
 
   @Get(':projectId')
   async getPhases(
@@ -37,10 +44,37 @@ export class PhasesController {
   }
 
   @Get('view/:phaseId')
-  async getPhase(@Param('phaseId', ParseUUIDPipe) phaseId: string) {
-    // TODO: vverify user
-    const phase = await this.phasesService.getOneByIdOrThrow(phaseId);
+  async getPhase(
+    @Param('phaseId', PhaseByIdPipe)
+    { phase, project }: { phase: Phase; project: Project },
+    @CustomRequest(UserPipe) user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
     return mapPhaseToEntity(phase);
+  }
+
+  @Patch(':phaseId')
+  async startPhase(
+    @Param('phaseId', PhaseByIdPipe)
+    { phase, project }: { phase: Phase; project: Project },
+    @CustomRequest(UserPipe) user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (phase.status !== 'notStarted') {
+      throw new NotFoundException('Phase is already started');
+    }
+
+    const updatedPhase = await this.phasesService.update({
+      ...phase,
+      status: 'inProgress',
+      startedAt: new Date(),
+    });
+    return mapPhaseToEntity(updatedPhase);
   }
 
   @Delete(':phaseId')

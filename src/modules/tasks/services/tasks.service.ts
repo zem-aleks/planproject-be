@@ -2,12 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task } from '../entities/task.entity';
+import { TasksAiService } from './tasks-ai.service';
+import { Milestone } from '../../milestones/entities/milestone.entity';
+import { PhasesService } from '../../phases/services/phases.service';
+import { Phase } from '../../phases/entities/phase.entity';
+import { Project } from '../../projects/entities/project.entity';
+import { MilestonesService } from '../../milestones/services/milestones.service';
 
 @Injectable()
 export class TasksService {
   constructor(
     @InjectRepository(Task)
     private readonly repository: Repository<Task>,
+    private readonly tasksAiService: TasksAiService,
+    private readonly phasesService: PhasesService,
+    // private readonly projectsService: ProjectsService,
+    private readonly milestonesService: MilestonesService,
   ) {}
 
   async create(
@@ -26,9 +36,16 @@ export class TasksService {
     return this.repository.save(data);
   }
 
-  async getAll(milestoneId: string) {
+  async getAllByMilestoneId(milestoneId: string) {
     return this.repository.find({
       where: { milestoneId },
+      order: { orderIndex: 'ASC' },
+    });
+  }
+
+  async getAllByProjectId(projectId: string) {
+    return this.repository.find({
+      where: { projectId },
       order: { orderIndex: 'ASC' },
     });
   }
@@ -39,5 +56,35 @@ export class TasksService {
 
   async softDelete(taskId: string) {
     return this.repository.softDelete(taskId);
+  }
+
+  async generateTasksForMilestone({
+    milestone,
+    project,
+    phase,
+  }: {
+    milestone: Milestone;
+    phase: Phase;
+    project: Project;
+  }) {
+    const phases = await this.phasesService.getAll(project.id);
+    const milestones = await this.milestonesService.getAll(phase.id);
+    const { tasks } = await this.tasksAiService.generateMilestoneTasks({
+      project,
+      phase,
+      phases,
+      milestone,
+      milestones,
+    });
+
+    return this.createMany(
+      tasks.map((task) => ({
+        ...task,
+        milestoneId: milestone.id,
+        phaseId: milestone.phaseId,
+        projectId: phase.projectId,
+        status: 'notStarted',
+      })),
+    );
   }
 }

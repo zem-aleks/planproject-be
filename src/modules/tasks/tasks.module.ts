@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TasksService } from './services/tasks.service';
 import { Task } from './entities/task.entity';
@@ -7,13 +7,15 @@ import { PhasesModule } from '../phases/phases.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { TasksAiService } from './services/tasks-ai.service';
 import { MilestonesModule } from '../milestones/milestones.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Task]),
     ProjectsModule,
     PhasesModule,
-    MilestonesModule,
+    forwardRef(() => MilestonesModule),
+    forwardRef(() => UsersModule),
   ],
   controllers: [TasksController],
   providers: [TasksService, TasksAiService],

@@ -37,6 +37,9 @@ export class Task {
   @Column({ nullable: true, type: 'varchar' })
   examples: string | null;
 
+  @Column({ nullable: false, type: 'int', default: 0 })
+  day: number;
+
   @Column({ nullable: false, type: 'int' })
   orderIndex: number;
 

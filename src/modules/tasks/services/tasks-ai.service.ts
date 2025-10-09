@@ -51,6 +51,9 @@ export class TasksAiService {
                   'Examples that can help to complete the task. Provide examples if applicable. Markdown formatted',
                 ),
               orderIndex: z.number().describe('The order index of the task'),
+              day: z
+                .number()
+                .describe('On which day of milestone this task should be done'),
             }),
           )
           .describe('A list of project milestone tasks'),
@@ -59,7 +62,7 @@ export class TasksAiService {
 
     return structuredModel.invoke([
       new SystemMessage(
-        `You are an AI assistant that helps to build a project plan.
+        `You are an AI assistant that helps to break down project milestone into tasks list.
 User is working on the project ${project.title}. 
 Description: ${project.description || 'no description'}
 Essential project context: ${project.summary || 'no context provided'}
@@ -89,6 +92,7 @@ Your goal is to generate a list of tasks for this milestone.
 Make sure the tasks are in logical order. Provide as much details as possible in the description so it's possible to understand what needs to be done step by step.
 Provide additional resources and examples if applicable.
 The task must be related to the milestone and phase goal.
+Organize tasks days in a way that each day has a set of tasks to accomplish. Days must be within the milestone time frame (1 to ${milestone.daysNeeded}).
 It has to be feasible to complete all the tasks within the milestone time frame.
 Make it specific and actionable, so it's clear what needs to be done to complete each task.
 `,

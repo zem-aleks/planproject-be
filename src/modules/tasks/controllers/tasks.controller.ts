@@ -15,15 +15,18 @@ import { PhasesService } from '../../phases/services/phases.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
-import { TasksAiService } from '../services/tasks-ai.service';
 import { MilestonesService } from '../../milestones/services/milestones.service';
+import { ProjectByIdPipe } from '../../projects/pipes/project-by-id.pipe';
+import { Project } from '../../projects/entities/project.entity';
+import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
+import { UserPipe } from '../../users/pipes/user.pipe';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
 export class TasksController {
   constructor(
     private readonly tasksService: TasksService,
-    private readonly tasksAiService: TasksAiService,
+
     private readonly phasesService: PhasesService,
     private readonly projectsService: ProjectsService,
     private readonly milestonesService: MilestonesService,
@@ -32,7 +35,20 @@ export class TasksController {
   @Get(':milestoneId')
   async getTasks(@Param('milestoneId', ParseUUIDPipe) milestoneId: string) {
     // TODO: vverify user
-    const tasks = await this.tasksService.getAll(milestoneId);
+    const tasks = await this.tasksService.getAllByMilestoneId(milestoneId);
+    return tasks.map(mapTaskToEntity);
+  }
+
+  @Get('active/:projectId')
+  async getActiveTasks(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @CustomRequest(UserPipe) user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const tasks = await this.tasksService.getAllByProjectId(project.id);
     return tasks.map(mapTaskToEntity);
   }
 
@@ -47,32 +63,18 @@ export class TasksController {
     const project = await this.projectsService.getOneByIdOrThrow(
       phase.projectId,
     );
-    const phases = await this.phasesService.getAll(project.id);
-    const milestones = await this.milestonesService.getAll(phase.id);
+
     if (project.userId !== user.id) {
       throw new UnauthorizedException('Permissions denied');
     }
 
-    const { tasks } = await this.tasksAiService.generateMilestoneTasks({
+    const tasks = await this.tasksService.generateTasksForMilestone({
       project,
       phase,
-      phases,
       milestone,
-      milestones,
     });
 
-    const milestoneTasks = await this.tasksService.createMany(
-      tasks.map((task) => ({
-        ...task,
-        milestoneId: milestone.id,
-        phaseId: milestone.phaseId,
-        projectId: phase.projectId,
-        status: 'notStarted',
-      })),
-    );
-
-    console.log(milestoneTasks);
-    return milestoneTasks.map(mapTaskToEntity);
+    return tasks.map(mapTaskToEntity);
   }
 
   @Delete(':taskId')
