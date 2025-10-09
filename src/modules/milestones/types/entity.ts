@@ -7,6 +7,7 @@ export type MilestoneEntity = {
   daysNeeded: number;
   orderIndex: number;
   status: MilestoneStatus;
+  startedAt: Date;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;

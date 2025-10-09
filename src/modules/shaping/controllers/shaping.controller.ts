@@ -136,6 +136,7 @@ export class ShapingController {
         timelineStartDay: phase.timelineStartDay,
         timelineEndDay: phase.timelineEndDay,
         status: 'building',
+        startedAt: new Date(),
       })),
     );
 

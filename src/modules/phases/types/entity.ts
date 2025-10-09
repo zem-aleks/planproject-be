@@ -11,6 +11,7 @@ export type PhaseEntity = {
   timelineStartDay: number;
   timelineEndDay: number;
   status: PhaseStatus;
+  startedAt: Date;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;

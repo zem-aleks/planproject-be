@@ -153,6 +153,7 @@ export class ShapingPublicController {
         timelineStartDay: phase.timelineStartDay,
         timelineEndDay: phase.timelineEndDay,
         status: 'building',
+        startedAt: new Date(),
       })),
     );
 

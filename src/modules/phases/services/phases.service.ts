@@ -22,7 +22,7 @@ export class PhasesService {
     return this.repository.save(data);
   }
 
-  async update(data: Phase): Promise<Phase> {
+  async update(data: Omit<Phase, 'milestones'>) {
     return this.repository.save(data);
   }
 
@@ -38,6 +38,13 @@ export class PhasesService {
       where: { projectId },
       order: { timelineStartDay: 'ASC' },
       relations: ['milestones'],
+    });
+  }
+
+  async getFirstNotStarted(projectId: string) {
+    return this.repository.findOne({
+      where: { projectId, status: 'notStarted' },
+      order: { timelineStartDay: 'ASC' },
     });
   }
 

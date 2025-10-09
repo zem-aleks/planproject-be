@@ -38,6 +38,13 @@ export class Milestone {
   @Column({ nullable: false, type: 'varchar', default: 'notStarted' })
   status: MilestoneStatus;
 
+  @Column({
+    name: 'startedAt',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  startedAt: Date;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 

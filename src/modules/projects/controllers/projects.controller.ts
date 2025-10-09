@@ -68,16 +68,12 @@ export class ProjectsController {
       startedAt: new Date(),
     });
 
-    const phases = await this.phasesService.getAllWithMilestones(project.id);
-    if (phases.length > 0) {
-      const { milestones, ...phase } = phases[0];
+    const firstPhase = await this.phasesService.getFirstNotStarted(project.id);
+    if (firstPhase) {
       await this.phasesService.update({
-        ...phase,
+        ...firstPhase,
         status: 'inProgress',
-        milestones: milestones.map((milestone) => ({
-          ...milestone,
-          status: milestone.orderIndex === 1 ? 'inProgress' : 'notStarted',
-        })),
+        startedAt: new Date(),
       });
     }
 

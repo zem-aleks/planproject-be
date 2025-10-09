@@ -61,6 +61,7 @@ export class MilestonesController {
         ...milestone,
         phaseId: phase.id,
         status: 'notStarted',
+        startedAt: new Date(),
       })),
     );
 
