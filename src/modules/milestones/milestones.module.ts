@@ -7,6 +7,7 @@ import { PhasesModule } from '../phases/phases.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { MilestonesAiService } from './services/milestones-ai.service';
 import { TasksModule } from '../tasks/tasks.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { TasksModule } from '../tasks/tasks.module';
     ProjectsModule,
     PhasesModule,
     forwardRef(() => TasksModule),
+    forwardRef(() => UsersModule),
   ],
   controllers: [MilestonesController],
   providers: [MilestonesService, MilestonesAiService],

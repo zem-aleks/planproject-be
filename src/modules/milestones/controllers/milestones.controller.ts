@@ -18,9 +18,19 @@ import { ProjectsService } from '../../projects/services/projects.service';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { MilestonesAiService } from '../services/milestones-ai.service';
-import { mapPhaseToEntityWithMilestones } from '../../phases/mappers/mapPhaseToEntity';
+import {
+  mapPhaseToEntity,
+  mapPhaseToEntityWithMilestones,
+} from '../../phases/mappers/mapPhaseToEntity';
 import { mapTaskToEntity } from '../../tasks/mappers/mapTaskToEntity';
 import { TasksService } from '../../tasks/services/tasks.service';
+import {
+  PhaseAndProject,
+  PhaseByIdPipe,
+} from '../../phases/pipes/phase-by-id.pipe';
+import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
+import { UserPipe } from '../../users/pipes/user.pipe';
+import { MilestoneWithTasksEntity } from '../types/entity';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -33,11 +43,41 @@ export class MilestonesController {
     private readonly tasksService: TasksService,
   ) {}
 
-  @Get(':phaseId')
-  async getMilestones(@Param('phaseId', ParseUUIDPipe) phaseId: string) {
-    // TODO: vverify user
-    const milestones = await this.milestonesService.getAll(phaseId);
+  @Get('phase/:phaseId')
+  async getMilestones(
+    @Param('phaseId', PhaseByIdPipe) { phase, project }: PhaseAndProject,
+    @CustomRequest(UserPipe) user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const milestones = await this.milestonesService.getAll(phase.id);
     return milestones.map(mapMilestoneToEntity);
+  }
+
+  @Get(':milestoneId')
+  async getMilestone(
+    @Param('milestoneId', ParseUUIDPipe) milestoneId: string,
+    @CustomRequest(UserPipe) user: User,
+  ): Promise<MilestoneWithTasksEntity> {
+    const milestone =
+      await this.milestonesService.getOneByIdOtThrow(milestoneId);
+
+    const project = await this.projectsService.getOneByIdOrThrow(
+      milestone.projectId,
+    );
+
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const phase = await this.phasesService.getOneByIdOrThrow(milestone.phaseId);
+    const tasks = await this.tasksService.getAllByMilestoneId(milestone.id);
+    return {
+      ...mapMilestoneToEntity(milestone),
+      tasks: tasks.map(mapTaskToEntity),
+      phase: mapPhaseToEntity(phase),
+    };
   }
 
   @Post(':phaseId')
@@ -66,6 +106,7 @@ export class MilestonesController {
         ...milestone,
         phaseId: phase.id,
         projectId: project.id,
+        userId: user.id,
         status: 'notStarted',
         startedAt: new Date(),
       })),

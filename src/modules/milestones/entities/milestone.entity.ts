@@ -20,9 +20,13 @@ export class Milestone {
   @Column({ nullable: false })
   phaseId: string;
 
-  // @Index()
-  // @Column({ nullable: false })
-  // projectId: string;
+  @Index()
+  @Column({ nullable: false, default: '' })
+  projectId: string;
+
+  @Index()
+  @Column({ nullable: false, default: '' })
+  userId: string;
 
   @Column({ nullable: false })
   title: string;

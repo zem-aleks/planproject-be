@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -20,8 +21,7 @@ import { Project } from '../../projects/entities/project.entity';
 import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../users/pipes/user.pipe';
 import { User } from '@supabase/supabase-js';
-import { PhaseByIdPipe } from '../pipes/phase-by-id.pipe';
-import { Phase } from '../entities/phase.entity';
+import { PhaseAndProject, PhaseByIdPipe } from '../pipes/phase-by-id.pipe';
 
 @Controller('phases')
 @UseGuards(JwtAuthGuard)
@@ -46,7 +46,7 @@ export class PhasesController {
   @Get('view/:phaseId')
   async getPhase(
     @Param('phaseId', PhaseByIdPipe)
-    { phase, project }: { phase: Phase; project: Project },
+    { phase, project }: PhaseAndProject,
     @CustomRequest(UserPipe) user: User,
   ) {
     if (project.userId !== user.id) {
@@ -58,11 +58,15 @@ export class PhasesController {
   @Patch(':phaseId')
   async startPhase(
     @Param('phaseId', PhaseByIdPipe)
-    { phase, project }: { phase: Phase; project: Project },
+    { phase, project }: PhaseAndProject,
     @CustomRequest(UserPipe) user: User,
   ) {
     if (project.userId !== user.id) {
       throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (project.status !== 'active') {
+      throw new BadRequestException('Project is not started yet');
     }
 
     if (phase.status !== 'notStarted') {

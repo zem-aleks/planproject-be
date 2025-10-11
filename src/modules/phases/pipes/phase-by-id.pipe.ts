@@ -7,6 +7,11 @@ import { Phase } from '../entities/phase.entity';
 
 type PhaseRequest = string; // actual projectId
 
+export type PhaseAndProject = {
+  phase: Phase;
+  project: Project;
+};
+
 @Injectable()
 export class PhaseByIdPipe implements PipeTransform {
   constructor(
@@ -14,9 +19,7 @@ export class PhaseByIdPipe implements PipeTransform {
     private readonly phasesService: PhasesService,
   ) {}
 
-  async transform(
-    request: PhaseRequest,
-  ): Promise<{ phase: Phase; project: Project }> {
+  async transform(request: PhaseRequest): Promise<PhaseAndProject> {
     const phase = await this.phasesService.getOneByIdOrThrow(request);
     const project = await this.projectsService.getOneByIdOrThrow(
       phase.projectId,
