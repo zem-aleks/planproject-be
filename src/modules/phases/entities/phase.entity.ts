@@ -49,6 +49,9 @@ export class Phase {
   })
   startedAt: Date;
 
+  @Column({ type: 'timestamp', default: null, nullable: true })
+  completedAt: Date | null;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
