@@ -5,11 +5,13 @@ import {
   Entity,
   Index,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { MilestoneStatus } from '../types/entity';
 import { Phase } from '../../phases/entities/phase.entity';
+import { Task } from '../../tasks/entities/task.entity';
 
 @Entity()
 export class Milestone {
@@ -67,4 +69,10 @@ export class Milestone {
     nullable: false,
   })
   phase: Phase;
+
+  @OneToMany(() => Task, (task) => task.milestone, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  tasks: Task[];
 }

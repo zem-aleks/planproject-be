@@ -1,9 +1,13 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   UnauthorizedException,
   UseGuards,
@@ -33,8 +37,22 @@ export class TasksController {
   ) {}
 
   @Get(':milestoneId')
-  async getTasks(@Param('milestoneId', ParseUUIDPipe) milestoneId: string) {
-    // TODO: vverify user
+  async getTasks(
+    @Param('milestoneId', ParseUUIDPipe) milestoneId: string,
+    @CustomRequest(UserPipe) user: User,
+  ) {
+    const milestone =
+      await this.milestonesService.getOneByIdOtThrow(milestoneId);
+
+    // TODO: can be simplified with checking of userId in milestone
+    const project = await this.projectsService.getOneByIdOrThrow(
+      milestone.projectId,
+    );
+
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
     const tasks = await this.tasksService.getAllByMilestoneId(milestoneId);
     return tasks.map(mapTaskToEntity);
   }
@@ -75,6 +93,30 @@ export class TasksController {
     });
 
     return tasks.map(mapTaskToEntity);
+  }
+
+  @Patch('complete/:taskId')
+  async completeTask(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body('message') message: string,
+  ) {
+    const task = await this.tasksService.getOneById(taskId);
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    if (task.status === 'completed') {
+      throw new BadRequestException('Task is already completed');
+    }
+
+    const completedTask = await this.tasksService.completeTask({
+      task,
+      message,
+    });
+
+    // TODO: check the milestone
+
+    return mapTaskToEntity(completedTask);
   }
 
   @Delete(':taskId')

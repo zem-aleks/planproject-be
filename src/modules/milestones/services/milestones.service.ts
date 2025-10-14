@@ -17,7 +17,9 @@ export class MilestonesService {
   }
 
   async createMany(
-    data: Array<Omit<Milestone, 'id' | 'createdAt' | 'updatedAt' | 'phase'>>,
+    data: Array<
+      Omit<Milestone, 'id' | 'createdAt' | 'updatedAt' | 'phase' | 'tasks'>
+    >,
   ): Promise<Milestone[]> {
     return this.repository.save(data);
   }

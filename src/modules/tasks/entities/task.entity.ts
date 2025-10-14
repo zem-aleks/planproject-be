@@ -3,10 +3,13 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { TaskStatus } from '../types/entity';
+import { Milestone } from '../../milestones/entities/milestone.entity';
 
 @Entity()
 export class Task {
@@ -46,6 +49,12 @@ export class Task {
   @Column({ nullable: false, type: 'varchar', default: 'notStarted' })
   status: TaskStatus;
 
+  @Column({ nullable: true, type: 'text', default: null })
+  completeMessage: string | null;
+
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  completedAt: Date | null;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
@@ -54,4 +63,11 @@ export class Task {
 
   @DeleteDateColumn()
   deletedAt?: Date;
+
+  @ManyToOne(() => Milestone, (milestone) => milestone.tasks, {
+    onDelete: 'CASCADE', // delete messages when their chat is deleted
+    nullable: false,
+  })
+  @JoinColumn({ name: 'milestoneId' })
+  milestone: Milestone;
 }

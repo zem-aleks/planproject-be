@@ -27,7 +27,7 @@ export class TasksService {
   }
 
   async createMany(
-    data: Array<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>,
+    data: Array<Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'milestone'>>,
   ): Promise<Task[]> {
     return this.repository.save(data);
   }
@@ -47,6 +47,7 @@ export class TasksService {
     return this.repository.find({
       where: { projectId },
       order: { orderIndex: 'ASC' },
+      relations: ['milestone'],
     });
   }
 
@@ -84,7 +85,16 @@ export class TasksService {
         phaseId: milestone.phaseId,
         projectId: phase.projectId,
         status: 'notStarted',
+        completedAt: null,
+        completeMessage: null,
       })),
     );
+  }
+
+  async completeTask({ task, message }: { task: Task; message: string }) {
+    task.status = 'completed';
+    task.completeMessage = message;
+    task.completedAt = new Date();
+    return this.update(task);
   }
 }
