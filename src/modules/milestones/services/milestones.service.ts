@@ -57,4 +57,17 @@ export class MilestonesService {
   //     order: { orderIndex: 'ASC' },
   //   });
   // }
+
+  async completeMilestone({
+    milestone,
+    message,
+  }: {
+    milestone: Milestone;
+    message: string;
+  }) {
+    milestone.status = 'completed';
+    milestone.completeMessage = message;
+    milestone.completedAt = new Date();
+    return this.update(milestone);
+  }
 }

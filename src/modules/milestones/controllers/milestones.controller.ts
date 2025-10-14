@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
@@ -109,6 +110,8 @@ export class MilestonesController {
         userId: user.id,
         status: 'notStarted',
         startedAt: new Date(),
+        completeMessage: null,
+        completedAt: null,
       })),
     );
 
@@ -168,5 +171,41 @@ export class MilestonesController {
   ) {
     // TODO: vverify user
     return this.milestonesService.softDelete(milestoneId);
+  }
+
+  @Patch('complete/:milestoneId')
+  async completeMilestone(
+    @Param('milestoneId', ParseUUIDPipe) milestoneId: string,
+    @Body('message') message: string,
+    @AuthUser() user: User,
+  ) {
+    const milestone =
+      await this.milestonesService.getOneByIdOtThrow(milestoneId);
+    const phase = await this.phasesService.getOneByIdOrThrow(milestone.phaseId);
+    const project = await this.projectsService.getOneByIdOrThrow(
+      phase.projectId,
+    );
+
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (milestone.status === 'completed') {
+      throw new BadRequestException('Milestone already completed');
+    }
+
+    const completedMilestone = await this.milestonesService.completeMilestone({
+      milestone,
+      message,
+    });
+
+    const tasks = await this.tasksService.getAllByMilestoneId(milestone.id);
+    const incompleteTasks = tasks.filter((task) => task.status !== 'completed');
+    const promises = incompleteTasks.map((task) =>
+      this.tasksService.completeTask({ task, message: '' }),
+    );
+    await Promise.all(promises);
+
+    return mapMilestoneToEntity(completedMilestone);
   }
 }

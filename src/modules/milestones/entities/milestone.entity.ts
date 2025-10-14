@@ -48,6 +48,12 @@ export class Milestone {
   @Column({ nullable: false, type: 'varchar', default: 'notStarted' })
   status: MilestoneStatus;
 
+  @Column({ nullable: true, type: 'text', default: null })
+  completeMessage: string | null;
+
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  completedAt: Date | null;
+
   @Column({
     name: 'startedAt',
     type: 'timestamp',

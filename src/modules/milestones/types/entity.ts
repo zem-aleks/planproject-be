@@ -12,6 +12,8 @@ export type MilestoneEntity = {
   daysNeeded: number;
   orderIndex: number;
   status: MilestoneStatus;
+  completeMessage: string | null;
+  completedAt: Date | null;
   startedAt: Date;
   createdAt: Date;
   updatedAt: Date;
