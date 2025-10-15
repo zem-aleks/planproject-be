@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -113,6 +114,79 @@ export class MilestonesController {
         completeMessage: null,
         completedAt: null,
       })),
+    );
+
+    const updatedPhase = await this.phasesService.update({
+      ...phase,
+      status: 'notStarted',
+    });
+
+    return mapPhaseToEntityWithMilestones({
+      ...updatedPhase,
+      milestones: phaseMilestones,
+    });
+  }
+
+  @Put(':phaseId')
+  async modifyMilestones(
+    @Param('phaseId', ParseUUIDPipe) phaseId: string,
+    @Body('message') message: string,
+    @AuthUser() user: User,
+  ) {
+    if (!message || message.trim().length === 0) {
+      throw new BadRequestException('Message is required');
+    }
+
+    const phase = await this.phasesService.getOneByIdOrThrow(phaseId);
+    if (phase.status !== 'notStarted') {
+      throw new BadRequestException('Phase already started or completed');
+    }
+
+    const project = await this.projectsService.getOneByIdOrThrow(
+      phase.projectId,
+    );
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const existingMilestones = await this.milestonesService.getAll(phase.id);
+    const milestonesMap = new Map(existingMilestones.map((m) => [m.id, m]));
+    const { updatedMilestones } =
+      await this.milestonesAiService.modifyPhaseMilestones({
+        project,
+        phase,
+        milestones: existingMilestones,
+        modificationMessage: message,
+      });
+
+    const phaseMilestones = await this.milestonesService.createMany(
+      updatedMilestones.map((milestone) => {
+        const existingMilestone = milestonesMap.get(milestone.id);
+        if (existingMilestone) {
+          return {
+            ...existingMilestone,
+            ...milestone,
+            phaseId: phase.id,
+            projectId: project.id,
+            userId: user.id,
+            status: 'notStarted',
+            startedAt: new Date(),
+            completeMessage: null,
+            completedAt: null,
+          };
+        }
+
+        return {
+          ...milestone,
+          phaseId: phase.id,
+          projectId: project.id,
+          userId: user.id,
+          status: 'notStarted',
+          startedAt: new Date(),
+          completeMessage: null,
+          completedAt: null,
+        };
+      }),
     );
 
     const updatedPhase = await this.phasesService.update({
