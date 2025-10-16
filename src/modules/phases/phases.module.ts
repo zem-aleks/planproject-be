@@ -5,6 +5,7 @@ import { Phase } from './entities/phase.entity';
 import { PhasesController } from './controllers/phases.controller';
 import { ProjectsModule } from '../projects/projects.module';
 import { UsersModule } from '../users/users.module';
+import { PhasesAiService } from './services/phases-ai.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { UsersModule } from '../users/users.module';
     forwardRef(() => UsersModule),
   ],
   controllers: [PhasesController],
-  providers: [PhasesService],
+  providers: [PhasesService, PhasesAiService],
   exports: [PhasesService],
 })
 export class PhasesModule {}

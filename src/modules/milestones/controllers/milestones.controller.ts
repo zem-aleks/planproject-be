@@ -159,6 +159,15 @@ export class MilestonesController {
         modificationMessage: message,
       });
 
+    const milestonesToDelete = existingMilestones.filter((milestone) => {
+      return !updatedMilestones.find((m) => m.id === milestone.id);
+    });
+
+    const deletePromises = milestonesToDelete.map((milestone) =>
+      this.milestonesService.softDelete(milestone.id),
+    );
+    await Promise.all(deletePromises);
+
     const phaseMilestones = await this.milestonesService.createMany(
       updatedMilestones.map((milestone) => {
         const existingMilestone = milestonesMap.get(milestone.id);

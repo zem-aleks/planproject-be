@@ -2,17 +2,17 @@ import { PhaseEntity, PhaseEntityWithMilestones } from '../types/entity';
 import { Phase } from '../entities/phase.entity';
 import { mapMilestoneToEntity } from '../../milestones/mappers/mapMilestoneToEntity';
 
-export const mapPhaseToEntity = (project: Phase): PhaseEntity => {
+export const mapPhaseToEntity = (phase: Phase): PhaseEntity => {
   return {
-    ...project,
+    ...phase,
   };
 };
 
 export const mapPhaseToEntityWithMilestones = (
-  project: Phase,
+  phase: Phase,
 ): PhaseEntityWithMilestones => {
   return {
-    ...mapPhaseToEntity(project),
-    milestones: (project.milestones || []).map(mapMilestoneToEntity),
+    ...mapPhaseToEntity(phase),
+    milestones: (phase.milestones || []).map(mapMilestoneToEntity),
   };
 };
