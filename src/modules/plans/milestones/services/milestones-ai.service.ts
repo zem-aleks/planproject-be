@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { getModel } from '../../ai/models/models';
+import { getModel } from '../../../ai/models/models';
 import { z } from 'zod';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { Phase } from '../../phases/entities/phase.entity';

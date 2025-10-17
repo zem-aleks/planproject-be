@@ -12,7 +12,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
+import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
 import {
   mapPhaseToEntity,
   mapPhaseToEntityWithMilestones,
@@ -20,11 +20,11 @@ import {
 import { PhasesService } from '../services/phases.service';
 import { ProjectByIdPipe } from '../../projects/pipes/project-by-id.pipe';
 import { Project } from '../../projects/entities/project.entity';
-import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
-import { UserPipe } from '../../users/pipes/user.pipe';
+import { CustomRequest } from '../../../../shared/decorators/custom-request.decorator';
+import { UserPipe } from '../../../users/pipes/user.pipe';
 import { User } from '@supabase/supabase-js';
 import { PhaseAndProject, PhaseByIdPipe } from '../pipes/phase-by-id.pipe';
-import { AuthUser } from '../../../shared/decorators/auth.decorator';
+import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import { PhasesAiService } from '../services/phases-ai.service';
 
 @Controller('phases')

@@ -9,17 +9,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from '../services/projects.service';
-import { ZodValidationPipe } from '../../../shared/pipes/zod-validation.pipe';
+import { ZodValidationPipe } from '../../../../shared/pipes/zod-validation.pipe';
 import { CREATE_PROJECT_SCHEMA, ProjectCreateData } from '../types/entity';
-import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
-import { AuthUser } from '../../../shared/decorators/auth.decorator';
+import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
+import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { mapProjectToEntity } from '../mappers/mapProjectToEntity';
 import { ProjectByIdPipe } from '../pipes/project-by-id.pipe';
 import { Project } from '../entities/project.entity';
 import { ProjectsAiService } from '../services/projects-ai.service';
-import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
-import { notReachable } from '../../../shared/utils/notReachable';
+import { SupabaseStorageService } from '../../../supabase/supabase-storage.service';
+import { notReachable } from '../../../../shared/utils/notReachable';
 import { PhasesService } from '../../phases/services/phases.service';
 import { MilestonesService } from '../../milestones/services/milestones.service';
 import { TasksService } from '../../tasks/services/tasks.service';
@@ -80,8 +80,10 @@ export class ProjectsController {
         true,
       );
       const startedPhase = await this.phasesService.startPhase(firstPhase);
+      const [firstMilestone, ...restMilestones] = milestones;
 
-      const promises = milestones.map((milestone) =>
+      // we don't await for the rest milestones tasks generation
+      const promises = restMilestones.map((milestone) =>
         this.tasksService.generateTasksForMilestone({
           project,
           phase: startedPhase,
@@ -90,15 +92,16 @@ export class ProjectsController {
         }),
       );
 
-      await Promise.all(promises);
-
-      if (
-        milestones.length > 0 &&
-        milestones.filter((m) => m.status === 'inProgress').length === 0
-      ) {
-        const { tasks, ...firstMilestone } = milestones[0];
+      if (firstMilestone) {
+        await this.tasksService.generateTasksForMilestone({
+          project,
+          phase: startedPhase,
+          milestone: firstMilestone,
+          phaseMilestones: milestones,
+        });
+        const { tasks, ...firstMilestoneData } = firstMilestone;
         await this.milestonesService.update({
-          ...firstMilestone,
+          ...firstMilestoneData,
           status: 'inProgress',
           startedAt: new Date(),
         });

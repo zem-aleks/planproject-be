@@ -11,19 +11,16 @@ import { memoryStorage } from 'multer';
 import { AuthModule } from './modules/auth/auth.module';
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { AiModule } from './modules/ai/ai.module';
-import { ProjectsModule } from './modules/projects/projects.module';
-import { Project } from './modules/projects/entities/project.entity';
+import { Project } from './modules/plans/projects/entities/project.entity';
 import { CryptoModule } from './modules/crypto/crypto.module';
 import { ShapingModule } from './modules/shaping/shaping.module';
 import { Shaping } from './modules/shaping/entities/shaping.entity';
-import { Phase } from './modules/phases/entities/phase.entity';
-import { PhasesModule } from './modules/phases/phases.module';
-import { MilestonesModule } from './modules/milestones/milestones.module';
-import { Milestone } from './modules/milestones/entities/milestone.entity';
-import { Task } from './modules/tasks/entities/task.entity';
-import { TasksModule } from './modules/tasks/tasks.module';
+import { Phase } from './modules/plans/phases/entities/phase.entity';
+import { Milestone } from './modules/plans/milestones/entities/milestone.entity';
+import { Task } from './modules/plans/tasks/entities/task.entity';
 import { User } from './modules/users/entities/user.entity';
 import { UsersModule } from './modules/users/users.module';
+import { PlansModule } from './modules/plans/plans.module';
 
 @Module({
   imports: [
@@ -70,11 +67,8 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     AiModule,
     // TextToSpeechModule,
-    ProjectsModule,
+    PlansModule,
     ShapingModule,
-    PhasesModule,
-    MilestonesModule,
-    TasksModule,
     UsersModule,
   ],
   controllers: [AppController],

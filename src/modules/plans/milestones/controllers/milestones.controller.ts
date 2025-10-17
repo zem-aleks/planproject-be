@@ -12,12 +12,12 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
+import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
 import { mapMilestoneToEntity } from '../mappers/mapMilestoneToEntity';
 import { MilestonesService } from '../services/milestones.service';
 import { PhasesService } from '../../phases/services/phases.service';
 import { ProjectsService } from '../../projects/services/projects.service';
-import { AuthUser } from '../../../shared/decorators/auth.decorator';
+import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { MilestonesAiService } from '../services/milestones-ai.service';
 import {
@@ -30,8 +30,8 @@ import {
   PhaseAndProject,
   PhaseByIdPipe,
 } from '../../phases/pipes/phase-by-id.pipe';
-import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
-import { UserPipe } from '../../users/pipes/user.pipe';
+import { CustomRequest } from '../../../../shared/decorators/custom-request.decorator';
+import { UserPipe } from '../../../users/pipes/user.pipe';
 import { MilestoneWithTasksEntity } from '../types/entity';
 
 @Controller('milestones')

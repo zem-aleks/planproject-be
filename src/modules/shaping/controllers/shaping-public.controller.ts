@@ -12,10 +12,10 @@ import {
 import { ShapingService } from '../services/shaping.service';
 import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
 import { ShapingAiService } from '../services/shaping-ai.service';
-import { ProjectsService } from '../../projects/services/projects.service';
-import { mapProjectToEntity } from '../../projects/mappers/mapProjectToEntity';
+import { ProjectsService } from '../../plans/projects/services/projects.service';
+import { mapProjectToEntity } from '../../plans/projects/mappers/mapProjectToEntity';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
-import { PhasesService } from '../../phases/services/phases.service';
+import { PhasesService } from '../../plans/phases/services/phases.service';
 
 @Controller('start')
 export class ShapingPublicController {

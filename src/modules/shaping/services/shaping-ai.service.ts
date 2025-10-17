@@ -8,7 +8,7 @@ import {
 } from '@langchain/core/messages';
 import { z } from 'zod';
 import { getLangchainMessages } from '../../ai/helpers/getLangchainMessages';
-import { Project } from '../../projects/entities/project.entity';
+import { Project } from '../../plans/projects/entities/project.entity';
 
 @Injectable()
 export class ShapingAiService {
