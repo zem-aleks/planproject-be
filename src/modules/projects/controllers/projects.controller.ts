@@ -21,6 +21,8 @@ import { ProjectsAiService } from '../services/projects-ai.service';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
 import { notReachable } from '../../../shared/utils/notReachable';
 import { PhasesService } from '../../phases/services/phases.service';
+import { MilestonesService } from '../../milestones/services/milestones.service';
+import { TasksService } from '../../tasks/services/tasks.service';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -30,8 +32,11 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly phasesService: PhasesService,
+    private readonly milestonesService: MilestonesService,
     private readonly projectsAiService: ProjectsAiService,
+    private readonly tasksService: TasksService,
     private readonly storageService: SupabaseStorageService,
+    // private readonly tasksAiService: TasksAiService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
@@ -70,11 +75,34 @@ export class ProjectsController {
 
     const firstPhase = await this.phasesService.getFirstNotStarted(project.id);
     if (firstPhase) {
-      await this.phasesService.update({
-        ...firstPhase,
-        status: 'inProgress',
-        startedAt: new Date(),
-      });
+      const milestones = await this.milestonesService.getPhaseMilestones(
+        firstPhase.id,
+        true,
+      );
+      const startedPhase = await this.phasesService.startPhase(firstPhase);
+
+      const promises = milestones.map((milestone) =>
+        this.tasksService.generateTasksForMilestone({
+          project,
+          phase: startedPhase,
+          milestone,
+          phaseMilestones: milestones,
+        }),
+      );
+
+      await Promise.all(promises);
+
+      if (
+        milestones.length > 0 &&
+        milestones.filter((m) => m.status === 'inProgress').length === 0
+      ) {
+        const { tasks, ...firstMilestone } = milestones[0];
+        await this.milestonesService.update({
+          ...firstMilestone,
+          status: 'inProgress',
+          startedAt: new Date(),
+        });
+      }
     }
 
     return mapProjectToEntity(updatedProject, this.logoPath);

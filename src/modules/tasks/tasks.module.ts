@@ -19,6 +19,6 @@ import { UsersModule } from '../users/users.module';
   ],
   controllers: [TasksController],
   providers: [TasksService, TasksAiService],
-  exports: [TasksService],
+  exports: [TasksService, TasksAiService],
 })
 export class TasksModule {}

@@ -13,8 +13,8 @@ import { UsersModule } from '../users/users.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Shaping]),
-    ProjectsModule,
-    PhasesModule,
+    forwardRef(() => ProjectsModule),
+    forwardRef(() => PhasesModule),
     SupabaseModule,
     forwardRef(() => UsersModule),
   ],

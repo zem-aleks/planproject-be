@@ -10,13 +10,11 @@ import { Milestone } from '../../milestones/entities/milestone.entity';
 export class TasksAiService {
   async generateMilestoneTasks({
     phase,
-    phases,
     project,
     milestones,
     milestone,
   }: {
     phase: Phase;
-    phases: Phase[];
     project: Project;
     milestones: Milestone[];
     milestone: Milestone;
@@ -67,9 +65,6 @@ User is working on the project ${project.title}.
 Description: ${project.description || 'no description'}
 Essential project context: ${project.summary || 'no context provided'}
 
-Here's a list of all project phases in JSON format:
-${JSON.stringify(phases, null, 2)}
-
 User is currently working on the phase: ${phase.title}.
 Phase ID: ${phase.id}
 Phase description: ${phase.description || 'no description'}
@@ -83,8 +78,8 @@ Here's a list of milestones for this phase in JSON format:
 ${JSON.stringify(milestones, null, 2)}
 
 User is currently working on the milestone: ${milestone.title}.
-Phase ID: ${milestone.id}
-Phase description: ${milestone.description || 'no description'}
+Milestone ID: ${milestone.id}
+Milestone description: ${milestone.description || 'no description'}
 Definition of done: ${milestone.definitionOfDone}
 Estimation on how many days needed to accomplish it: ${milestone.daysNeeded}
 
@@ -93,6 +88,88 @@ Make sure the tasks are in logical order. Provide as much details as possible in
 Provide additional resources and examples if applicable.
 The task must be related to the milestone and phase goal.
 Organize tasks days in a way that each day has a set of tasks to accomplish. Days must be within the milestone time frame (1 to ${milestone.daysNeeded}).
+It has to be feasible to complete all the tasks within the milestone time frame.
+Make it specific and actionable, so it's clear what needs to be done to complete each task.
+`,
+      ),
+    ]);
+  }
+
+  async generateMilestonesTasks({
+    phase,
+    project,
+    milestones,
+  }: {
+    phase: Phase;
+    project: Project;
+    milestones: Milestone[];
+  }) {
+    const model = getModel('gpt-4o-mini', 0.5);
+    const structuredModel = model.withStructuredOutput(
+      z.object({
+        tasks: z
+          .array(
+            z.object({
+              milestoneId: z
+                .string()
+                .describe('The ID of the milestone this task belongs to'),
+              title: z.string().describe('Task title'),
+              description: z
+                .string()
+                .describe(
+                  'Task detailed description that explains what needs to be done step by step. Markdown formatted',
+                ),
+              definitionOfDone: z
+                .string()
+                .describe(
+                  'Definition of done for this task. When this task can be considered as done. Markdown formatted',
+                ),
+              usefulResources: z
+                .string()
+                .nullable()
+                .describe(
+                  'Useful resources for this task, links, articles, etc. References that can help to complete the task. Markdown formatted',
+                ),
+              examples: z
+                .string()
+                .nullable()
+                .describe(
+                  'Examples that can help to complete the task. Provide examples if applicable. Markdown formatted',
+                ),
+              orderIndex: z.number().describe('The order index of the task'),
+              day: z
+                .number()
+                .describe('On which day of milestone this task should be done'),
+            }),
+          )
+          .describe('A list of project milestone tasks'),
+      }),
+    );
+
+    return structuredModel.invoke([
+      new SystemMessage(
+        `You are an AI assistant that helps to break down project milestones into tasks list.
+User is working on the project ${project.title}. 
+Description: ${project.description || 'no description'}
+Essential project context: ${project.summary || 'no context provided'}
+
+User is working on the phase: ${phase.title}.
+Phase ID: ${phase.id}
+Phase description: ${phase.description || 'no description'}
+Minimal time estimation in days: ${phase.minDaysNeeded}
+Maximal time estimation in days: ${phase.maxDaysNeeded}
+Expertise needed to complete this phase: ${phase.expertiseNeeded}
+Timeline start day: ${phase.timelineStartDay}
+Timeline end day: ${phase.timelineEndDay}
+
+Here's a list of milestones for this phase in JSON format:
+${JSON.stringify(milestones, null, 2)}
+
+Your goal is to generate a list of tasks for these milestones.
+Make sure the tasks are in logical order. Provide as much details as possible in the description so it's possible to understand what needs to be done step by step.
+Provide additional resources and examples if applicable.
+The task must be related to the milestone and phase goal.
+Organize tasks days in a way that each day has a set of tasks to accomplish. Days must be within the milestone time frame (1 to milestone.daysNeeded parameter).
 It has to be feasible to complete all the tasks within the milestone time frame.
 Make it specific and actionable, so it's clear what needs to be done to complete each task.
 `,

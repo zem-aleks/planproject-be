@@ -6,15 +6,17 @@ import { PhasesController } from './controllers/phases.controller';
 import { ProjectsModule } from '../projects/projects.module';
 import { UsersModule } from '../users/users.module';
 import { PhasesAiService } from './services/phases-ai.service';
+import { TasksModule } from '../tasks/tasks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Phase]),
     forwardRef(() => ProjectsModule),
     forwardRef(() => UsersModule),
+    forwardRef(() => TasksModule),
   ],
   controllers: [PhasesController],
   providers: [PhasesService, PhasesAiService],
-  exports: [PhasesService],
+  exports: [PhasesService, PhasesAiService],
 })
 export class PhasesModule {}

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Phase } from '../entities/phase.entity';
@@ -8,6 +12,8 @@ export class PhasesService {
   constructor(
     @InjectRepository(Phase)
     private readonly repository: Repository<Phase>,
+
+    // private readonly tasksService: TasksService,
   ) {}
 
   async create(
@@ -62,5 +68,17 @@ export class PhasesService {
 
   async softDelete(phaseId: string) {
     return this.repository.softDelete(phaseId);
+  }
+
+  async startPhase(phase: Phase) {
+    if (phase.status !== 'notStarted') {
+      throw new BadRequestException('Phase cannot be started');
+    }
+
+    return await this.update({
+      ...phase,
+      status: 'inProgress',
+      startedAt: new Date(),
+    });
   }
 }

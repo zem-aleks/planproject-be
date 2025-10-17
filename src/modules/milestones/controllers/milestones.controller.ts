@@ -230,17 +230,19 @@ export class MilestonesController {
       throw new UnauthorizedException('Permissions denied');
     }
 
-    const tasks = await this.tasksService.generateTasksForMilestone({
-      project,
-      phase,
-      milestone,
-    });
+    // const tasks = await this.tasksService.generateTasksForMilestone({
+    //   project,
+    //   phase,
+    //   milestone,
+    // });
 
     const updatedMilestone = await this.milestonesService.update({
       ...milestone,
       status: 'inProgress',
       startedAt: new Date(),
     });
+
+    const tasks = await this.tasksService.getAllByMilestoneId(milestone.id);
 
     return {
       ...updatedMilestone,

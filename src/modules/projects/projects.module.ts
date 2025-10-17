@@ -7,12 +7,16 @@ import { ProjectsAiService } from './services/projects-ai.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { UsersModule } from '../users/users.module';
 import { PhasesModule } from '../phases/phases.module';
+import { MilestonesModule } from '../milestones/milestones.module';
+import { TasksModule } from '../tasks/tasks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Project]),
     forwardRef(() => UsersModule),
     forwardRef(() => PhasesModule),
+    forwardRef(() => MilestonesModule),
+    forwardRef(() => TasksModule),
     SupabaseModule,
   ],
   controllers: [ProjectsController],

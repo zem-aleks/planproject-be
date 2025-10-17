@@ -24,7 +24,7 @@ export class MilestonesService {
     return this.repository.save(data);
   }
 
-  async update(data: Milestone): Promise<Milestone> {
+  async update(data: Omit<Milestone, 'tasks' | 'phase'>): Promise<Milestone> {
     return this.repository.save(data);
   }
 
@@ -69,5 +69,13 @@ export class MilestonesService {
     milestone.completeMessage = message;
     milestone.completedAt = new Date();
     return this.update(milestone);
+  }
+
+  async getPhaseMilestones(phaseId: string, withTasks?: boolean) {
+    return this.repository.find({
+      where: { phaseId },
+      order: { orderIndex: 'ASC' },
+      relations: withTasks ? ['tasks'] : [],
+    });
   }
 }

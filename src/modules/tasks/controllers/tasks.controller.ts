@@ -81,6 +81,7 @@ export class TasksController {
     const project = await this.projectsService.getOneByIdOrThrow(
       phase.projectId,
     );
+    const milestones = await this.milestonesService.getAll(phase.id);
 
     if (project.userId !== user.id) {
       throw new UnauthorizedException('Permissions denied');
@@ -90,6 +91,7 @@ export class TasksController {
       project,
       phase,
       milestone,
+      phaseMilestones: milestones,
     });
 
     return tasks.map(mapTaskToEntity);

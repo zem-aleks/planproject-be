@@ -4,10 +4,8 @@ import { Repository } from 'typeorm';
 import { Task } from '../entities/task.entity';
 import { TasksAiService } from './tasks-ai.service';
 import { Milestone } from '../../milestones/entities/milestone.entity';
-import { PhasesService } from '../../phases/services/phases.service';
 import { Phase } from '../../phases/entities/phase.entity';
 import { Project } from '../../projects/entities/project.entity';
-import { MilestonesService } from '../../milestones/services/milestones.service';
 
 @Injectable()
 export class TasksService {
@@ -15,9 +13,9 @@ export class TasksService {
     @InjectRepository(Task)
     private readonly repository: Repository<Task>,
     private readonly tasksAiService: TasksAiService,
-    private readonly phasesService: PhasesService,
+    // private readonly phasesService: PhasesService,
     // private readonly projectsService: ProjectsService,
-    private readonly milestonesService: MilestonesService,
+    // private readonly milestonesService: MilestonesService,
   ) {}
 
   async create(
@@ -63,19 +61,22 @@ export class TasksService {
     milestone,
     project,
     phase,
+    phaseMilestones,
   }: {
     milestone: Milestone;
     phase: Phase;
+    phaseMilestones: Milestone[];
     project: Project;
   }) {
-    const phases = await this.phasesService.getAll(project.id);
-    const milestones = await this.milestonesService.getAll(phase.id);
+    if (milestone.tasks.length > 0) {
+      return milestone.tasks;
+    }
+
     const { tasks } = await this.tasksAiService.generateMilestoneTasks({
       project,
       phase,
-      phases,
       milestone,
-      milestones,
+      milestones: phaseMilestones,
     });
 
     return this.createMany(
