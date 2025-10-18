@@ -6,6 +6,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Phase } from '../entities/phase.entity';
+import { MilestonesService } from '../../milestones/services/milestones.service';
+import { TasksService } from '../../tasks/services/tasks.service';
+import { Project } from '../../projects/entities/project.entity';
 
 @Injectable()
 export class PhasesService {
@@ -13,7 +16,8 @@ export class PhasesService {
     @InjectRepository(Phase)
     private readonly repository: Repository<Phase>,
 
-    // private readonly tasksService: TasksService,
+    private readonly milestonesService: MilestonesService,
+    private readonly tasksService: TasksService,
   ) {}
 
   async create(
@@ -70,15 +74,49 @@ export class PhasesService {
     return this.repository.softDelete(phaseId);
   }
 
-  async startPhase(phase: Phase) {
+  async startPhase(phase: Phase, project: Project) {
     if (phase.status !== 'notStarted') {
       throw new BadRequestException('Phase cannot be started');
     }
 
-    return await this.update({
+    const milestones = await this.milestonesService.getPhaseMilestones(
+      phase.id,
+      true,
+    );
+
+    const [firstMilestone, ...restMilestones] = milestones;
+
+    // we don't await for the rest milestones tasks generation
+    const promises = restMilestones.map((milestone) =>
+      this.tasksService.generateTasksForMilestone({
+        project,
+        phase,
+        milestone,
+        phaseMilestones: milestones,
+      }),
+    );
+
+    const updatedPhase = await this.update({
       ...phase,
       status: 'inProgress',
       startedAt: new Date(),
     });
+
+    if (firstMilestone) {
+      await this.tasksService.generateTasksForMilestone({
+        project,
+        phase,
+        milestone: firstMilestone,
+        phaseMilestones: milestones,
+      });
+      const { tasks, ...firstMilestoneData } = firstMilestone;
+      await this.milestonesService.update({
+        ...firstMilestoneData,
+        status: 'inProgress',
+        startedAt: new Date(),
+      });
+    }
+
+    return updatedPhase;
   }
 }

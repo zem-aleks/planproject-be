@@ -73,15 +73,7 @@ export class PhasesController {
       throw new BadRequestException('Project is not started yet');
     }
 
-    if (phase.status !== 'notStarted') {
-      throw new NotFoundException('Phase is already started');
-    }
-
-    const updatedPhase = await this.phasesService.update({
-      ...phase,
-      status: 'inProgress',
-      startedAt: new Date(),
-    });
+    const updatedPhase = await this.phasesService.startPhase(phase, project);
     return mapPhaseToEntity(updatedPhase);
   }
 

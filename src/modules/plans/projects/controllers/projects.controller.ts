@@ -75,37 +75,7 @@ export class ProjectsController {
 
     const firstPhase = await this.phasesService.getFirstNotStarted(project.id);
     if (firstPhase) {
-      const milestones = await this.milestonesService.getPhaseMilestones(
-        firstPhase.id,
-        true,
-      );
-      const startedPhase = await this.phasesService.startPhase(firstPhase);
-      const [firstMilestone, ...restMilestones] = milestones;
-
-      // we don't await for the rest milestones tasks generation
-      const promises = restMilestones.map((milestone) =>
-        this.tasksService.generateTasksForMilestone({
-          project,
-          phase: startedPhase,
-          milestone,
-          phaseMilestones: milestones,
-        }),
-      );
-
-      if (firstMilestone) {
-        await this.tasksService.generateTasksForMilestone({
-          project,
-          phase: startedPhase,
-          milestone: firstMilestone,
-          phaseMilestones: milestones,
-        });
-        const { tasks, ...firstMilestoneData } = firstMilestone;
-        await this.milestonesService.update({
-          ...firstMilestoneData,
-          status: 'inProgress',
-          startedAt: new Date(),
-        });
-      }
+      await this.phasesService.startPhase(firstPhase, project);
     }
 
     return mapProjectToEntity(updatedProject, this.logoPath);
