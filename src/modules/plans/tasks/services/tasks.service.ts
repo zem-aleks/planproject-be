@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { Task } from '../entities/task.entity';
 import { TasksAiService } from './tasks-ai.service';
 import { Milestone } from '../../milestones/entities/milestone.entity';
@@ -46,6 +46,31 @@ export class TasksService {
       where: { projectId },
       order: { orderIndex: 'ASC' },
       relations: ['milestone'],
+    });
+  }
+
+  async getNotCompletedByProjectId(projectId: string) {
+    const activeTasks = await this.repository.find({
+      where: { projectId, status: Not('completed') },
+      relations: ['milestone'],
+    });
+
+    return activeTasks.sort((a, b) => {
+      // 1️⃣ Sort by milestone.orderIndex first
+      const milestoneOrderA =
+        a.milestone?.orderIndex ?? Number.MAX_SAFE_INTEGER;
+      const milestoneOrderB =
+        b.milestone?.orderIndex ?? Number.MAX_SAFE_INTEGER;
+
+      if (milestoneOrderA !== milestoneOrderB) {
+        return milestoneOrderA - milestoneOrderB;
+      }
+
+      // 2️⃣ If milestones are equal, sort by task.orderIndex
+      const taskOrderA = a.orderIndex ?? Number.MAX_SAFE_INTEGER;
+      const taskOrderB = b.orderIndex ?? Number.MAX_SAFE_INTEGER;
+
+      return taskOrderA - taskOrderB;
     });
   }
 
