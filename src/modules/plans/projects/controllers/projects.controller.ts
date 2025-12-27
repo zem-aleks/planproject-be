@@ -17,12 +17,8 @@ import { User } from '@supabase/supabase-js';
 import { mapProjectToEntity } from '../mappers/mapProjectToEntity';
 import { ProjectByIdPipe } from '../pipes/project-by-id.pipe';
 import { Project } from '../entities/project.entity';
-import { ProjectsAiService } from '../services/projects-ai.service';
 import { SupabaseStorageService } from '../../../supabase/supabase-storage.service';
-import { notReachable } from '../../../../shared/utils/notReachable';
 import { PhasesService } from '../../phases/services/phases.service';
-import { MilestonesService } from '../../milestones/services/milestones.service';
-import { TasksService } from '../../tasks/services/tasks.service';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -32,9 +28,9 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly phasesService: PhasesService,
-    private readonly milestonesService: MilestonesService,
-    private readonly projectsAiService: ProjectsAiService,
-    private readonly tasksService: TasksService,
+    // private readonly milestonesService: MilestonesService,
+    // private readonly projectsAiService: ProjectsAiService,
+    // private readonly tasksService: TasksService,
     private readonly storageService: SupabaseStorageService,
     // private readonly tasksAiService: TasksAiService,
   ) {
@@ -116,52 +112,6 @@ export class ProjectsController {
       ...data,
     });
     return mapProjectToEntity(updatedProject, this.logoPath);
-  }
-
-  @Patch(':projectId/logo')
-  async generateProjectLogo(
-    @Param('projectId', ProjectByIdPipe) project: Project,
-    @AuthUser() user: User,
-  ) {
-    if (project.userId !== user.id) {
-      throw new UnauthorizedException('Permissions denied');
-    }
-
-    await this.projectsService.update({
-      ...project,
-      logoUrl: 'loading',
-    });
-
-    const base64 = await this.projectsAiService.generateLogo(project);
-    const buffer = Buffer.from(base64, 'base64');
-    const imageName = `${project.id}-${Math.floor(Math.random() * 10000)}.png`;
-    const uploadState = await this.storageService.upload({
-      bucketId: 'logo',
-      contentType: 'image/png',
-      name: imageName,
-      fileBody: buffer,
-    });
-
-    switch (uploadState.type) {
-      case 'error': {
-        const updatedProject = await this.projectsService.update({
-          ...project,
-          logoUrl: null,
-        });
-        return mapProjectToEntity(updatedProject, this.logoPath);
-      }
-
-      case 'success': {
-        const updatedProject = await this.projectsService.update({
-          ...project,
-          logoUrl: uploadState.url,
-        });
-        return mapProjectToEntity(updatedProject, this.logoPath);
-      }
-
-      default:
-        return notReachable(uploadState);
-    }
   }
 
   @Delete(':projectId')

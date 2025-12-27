@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ShapingService } from '../services/shaping.service';
 import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
@@ -16,6 +17,12 @@ import { ProjectsService } from '../../plans/projects/services/projects.service'
 import { mapProjectToEntity } from '../../plans/projects/mappers/mapProjectToEntity';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
 import { PhasesService } from '../../plans/phases/services/phases.service';
+import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
+import { Project } from '../../plans/projects/entities/project.entity';
+import { AuthUser } from '../../../shared/decorators/auth.decorator';
+import { User } from '@supabase/supabase-js';
+import { notReachable } from '../../../shared/utils/notReachable';
+import { ProjectsAiService } from '../../plans/projects/services/projects-ai.service';
 
 @Controller('start')
 export class ShapingPublicController {
@@ -25,10 +32,57 @@ export class ShapingPublicController {
     private readonly shapingService: ShapingService,
     private readonly shapingAiService: ShapingAiService,
     private readonly projectsService: ProjectsService,
+    private readonly projectsAiService: ProjectsAiService,
     private readonly storageService: SupabaseStorageService,
     private readonly phasesService: PhasesService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
+  }
+
+  @Patch(':projectId/logo')
+  async generateProjectLogo(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    await this.projectsService.update({
+      ...project,
+      logoUrl: 'loading',
+    });
+
+    const base64 = await this.projectsAiService.generateLogo(project);
+    const buffer = Buffer.from(base64, 'base64');
+    const imageName = `${project.id}-${Math.floor(Math.random() * 10000)}.png`;
+    const uploadState = await this.storageService.upload({
+      bucketId: 'logo',
+      contentType: 'image/png',
+      name: imageName,
+      fileBody: buffer,
+    });
+
+    switch (uploadState.type) {
+      case 'error': {
+        const updatedProject = await this.projectsService.update({
+          ...project,
+          logoUrl: null,
+        });
+        return mapProjectToEntity(updatedProject, this.logoPath);
+      }
+
+      case 'success': {
+        const updatedProject = await this.projectsService.update({
+          ...project,
+          logoUrl: uploadState.url,
+        });
+        return mapProjectToEntity(updatedProject, this.logoPath);
+      }
+
+      default:
+        return notReachable(uploadState);
+    }
   }
 
   @Post()
