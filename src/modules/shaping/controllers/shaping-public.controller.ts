@@ -8,7 +8,6 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ShapingService } from '../services/shaping.service';
 import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
@@ -19,8 +18,6 @@ import { SupabaseStorageService } from '../../supabase/supabase-storage.service'
 import { PhasesService } from '../../plans/phases/services/phases.service';
 import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
 import { Project } from '../../plans/projects/entities/project.entity';
-import { AuthUser } from '../../../shared/decorators/auth.decorator';
-import { User } from '@supabase/supabase-js';
 import { notReachable } from '../../../shared/utils/notReachable';
 import { ProjectsAiService } from '../../plans/projects/services/projects-ai.service';
 
@@ -42,11 +39,11 @@ export class ShapingPublicController {
   @Patch(':projectId/logo')
   async generateProjectLogo(
     @Param('projectId', ProjectByIdPipe) project: Project,
-    @AuthUser() user: User,
+    // @AuthUser() user: User,
   ) {
-    if (project.userId !== user.id) {
-      throw new UnauthorizedException('Permissions denied');
-    }
+    // if (project.userId !== user.id) {
+    //   throw new UnauthorizedException('Permissions denied');
+    // }
 
     await this.projectsService.update({
       ...project,
@@ -54,6 +51,14 @@ export class ShapingPublicController {
     });
 
     const base64 = await this.projectsAiService.generateLogo(project);
+    if (!base64) {
+      const updatedProject = await this.projectsService.update({
+        ...project,
+        logoUrl: null,
+      });
+      return mapProjectToEntity(updatedProject, this.logoPath);
+    }
+
     const buffer = Buffer.from(base64, 'base64');
     const imageName = `${project.id}-${Math.floor(Math.random() * 10000)}.png`;
     const uploadState = await this.storageService.upload({
