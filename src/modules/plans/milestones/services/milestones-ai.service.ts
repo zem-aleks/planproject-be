@@ -35,6 +35,18 @@ export class MilestonesAiService {
                 .describe(
                   'Definition of done for this milestone. When this milestone can be considered as done',
                 ),
+              usefulResources: z
+                .string()
+                .nullable()
+                .describe(
+                  'Useful resources for this milestone. Links, articles, books, examples of similar projects etc. References that can help to complete the milestone. Markdown formatted',
+                ),
+              steps: z
+                .string()
+                .nullable()
+                .describe(
+                  'List of simple steps how the milestone can be accomplished. Markdown formatted',
+                ),
               orderIndex: z
                 .number()
                 .describe('The order index of the milestone'),
@@ -73,6 +85,8 @@ For each milestone, provide:
 - daysNeeded: An estimation of how many days are needed to complete this milestone
 - definitionOfDone: A clear definition of done for this milestone. When can this milestone be considered as done
 - orderIndex: The order index of the milestone within the phase
+- usefulResources: Links, articles, books, examples of similar projects etc. References that can help to complete the milestone.
+- steps: List of simple steps how the milestone can be accomplished.
 
 Make sure that the total daysNeeded for all milestones does not exceed ${phase.maxDaysNeeded} days.
 Make sure that the total daysNeeded for all milestones is at least ${phase.minDaysNeeded} days.
@@ -110,6 +124,18 @@ Make sure that the total daysNeeded for all milestones is at least ${phase.minDa
                 .string()
                 .describe(
                   'Definition of done for this milestone. When this milestone can be considered as done',
+                ),
+              usefulResources: z
+                .string()
+                .nullable()
+                .describe(
+                  'Useful resources for this milestone. Links, articles, books, examples of similar projects etc. References that can help to complete the milestone. Markdown formatted',
+                ),
+              steps: z
+                .string()
+                .nullable()
+                .describe(
+                  'List of simple steps how the milestone can be accomplished. Markdown formatted',
                 ),
               orderIndex: z
                 .number()

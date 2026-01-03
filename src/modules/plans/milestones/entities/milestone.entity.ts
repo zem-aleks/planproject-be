@@ -48,6 +48,12 @@ export class Milestone {
   @Column({ nullable: false, type: 'varchar', default: 'notStarted' })
   status: MilestoneStatus;
 
+  @Column({ nullable: true, type: 'varchar' })
+  usefulResources: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  steps: string | null;
+
   @Column({ nullable: true, type: 'text', default: null })
   completeMessage: string | null;
 
