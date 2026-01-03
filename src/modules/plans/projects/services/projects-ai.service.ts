@@ -34,7 +34,7 @@ Make it as simple as possible, so it can be easily recognized and remembered.
       prompt,
       n: 1,
       // response_format: 'b64_json',
-      background: 'transparent',
+      background: 'auto',
       size: '1024x1024',
     });
 

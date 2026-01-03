@@ -102,7 +102,7 @@ export class ShapingPublicController {
 
     if (shapes.length > 0) {
       throw new ForbiddenException(
-        'You already have a started project. Only one project is allowed without registration.',
+        'You already have a started project. Only one project is available without registration.',
       );
     }
 
