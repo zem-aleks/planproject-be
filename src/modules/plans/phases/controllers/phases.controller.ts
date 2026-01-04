@@ -73,7 +73,7 @@ export class PhasesController {
       throw new BadRequestException('Project is not started yet');
     }
 
-    const updatedPhase = await this.phasesService.startPhase(phase, project);
+    const updatedPhase = await this.phasesService.startPhase(phase);
     return mapPhaseToEntity(updatedPhase);
   }
 

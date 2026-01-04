@@ -7,8 +7,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Phase } from '../entities/phase.entity';
 import { MilestonesService } from '../../milestones/services/milestones.service';
-import { TasksService } from '../../tasks/services/tasks.service';
-import { Project } from '../../projects/entities/project.entity';
 
 @Injectable()
 export class PhasesService {
@@ -17,7 +15,7 @@ export class PhasesService {
     private readonly repository: Repository<Phase>,
 
     private readonly milestonesService: MilestonesService,
-    private readonly tasksService: TasksService,
+    // private readonly tasksService: TasksService,
   ) {}
 
   async create(
@@ -74,27 +72,28 @@ export class PhasesService {
     return this.repository.softDelete(phaseId);
   }
 
-  async startPhase(phase: Phase, project: Project) {
+  async startPhase(phase: Phase) {
     if (phase.status !== 'notStarted') {
       throw new BadRequestException('Phase cannot be started');
     }
 
+    // TODO: only first milestone is needed
     const milestones = await this.milestonesService.getPhaseMilestones(
       phase.id,
       true,
     );
 
-    const [firstMilestone, ...restMilestones] = milestones;
+    const [firstMilestone] = milestones;
 
     // we don't await for the rest milestones tasks generation
-    const promises = restMilestones.map((milestone) =>
-      this.tasksService.generateTasksForMilestone({
-        project,
-        phase,
-        milestone,
-        phaseMilestones: milestones,
-      }),
-    );
+    // const promises = restMilestones.map((milestone) =>
+    //   this.tasksService.generateTasksForMilestone({
+    //     project,
+    //     phase,
+    //     milestone,
+    //     phaseMilestones: milestones,
+    //   }),
+    // );
 
     const updatedPhase = await this.update({
       ...phase,
@@ -103,15 +102,15 @@ export class PhasesService {
     });
 
     if (firstMilestone) {
-      await this.tasksService.generateTasksForMilestone({
-        project,
-        phase,
-        milestone: firstMilestone,
-        phaseMilestones: milestones,
-      });
-      const { tasks, ...firstMilestoneData } = firstMilestone;
+      // await this.tasksService.generateTasksForMilestone({
+      //   project,
+      //   phase,
+      //   milestone: firstMilestone,
+      //   phaseMilestones: milestones,
+      // });
+      // const { tasks, ...firstMilestoneData } = firstMilestone;
       await this.milestonesService.update({
-        ...firstMilestoneData,
+        ...firstMilestone,
         status: 'inProgress',
         startedAt: new Date(),
       });

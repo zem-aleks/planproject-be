@@ -74,10 +74,10 @@ export class MilestonesController {
     }
 
     const phase = await this.phasesService.getOneByIdOrThrow(milestone.phaseId);
-    const tasks = await this.tasksService.getAllByMilestoneId(milestone.id);
+    // const tasks = await this.tasksService.getAllByMilestoneId(milestone.id);
     return {
       ...mapMilestoneToEntity(milestone),
-      tasks: tasks.map(mapTaskToEntity),
+      // tasks: tasks.map(mapTaskToEntity),
       phase: mapPhaseToEntity(phase),
     };
   }

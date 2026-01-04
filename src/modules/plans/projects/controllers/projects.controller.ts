@@ -71,7 +71,7 @@ export class ProjectsController {
 
     const firstPhase = await this.phasesService.getFirstNotStarted(project.id);
     if (firstPhase) {
-      await this.phasesService.startPhase(firstPhase, project);
+      await this.phasesService.startPhase(firstPhase);
     }
 
     return mapProjectToEntity(updatedProject, this.logoPath);
