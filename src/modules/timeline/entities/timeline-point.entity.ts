@@ -22,7 +22,7 @@ export class TimelinePoint {
   comment: string;
 
   @Column({ nullable: false, type: 'simple-array' })
-  taskIds: string[];
+  milestoneIds: string[];
 
   @Column({ nullable: false, default: false })
   completed: boolean;

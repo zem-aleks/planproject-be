@@ -32,7 +32,7 @@ import {
 } from '../../phases/pipes/phase-by-id.pipe';
 import { CustomRequest } from '../../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../../users/pipes/user.pipe';
-import { MilestoneWithTasksEntity } from '../types/entity';
+import { MilestoneDetailsEntity } from '../types/entity';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -61,7 +61,7 @@ export class MilestonesController {
   async getMilestone(
     @Param('milestoneId', ParseUUIDPipe) milestoneId: string,
     @CustomRequest(UserPipe) user: User,
-  ): Promise<MilestoneWithTasksEntity> {
+  ): Promise<MilestoneDetailsEntity> {
     const milestone =
       await this.milestonesService.getOneByIdOtThrow(milestoneId);
 

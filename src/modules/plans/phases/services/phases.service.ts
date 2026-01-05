@@ -56,6 +56,13 @@ export class PhasesService {
     });
   }
 
+  async getActiveWithMilestones(projectId: string) {
+    return this.repository.find({
+      where: { projectId, status: 'inProgress' },
+      order: { timelineStartDay: 'ASC' },
+    });
+  }
+
   async getOneById(phaseId: string) {
     return this.repository.findOne({ where: { id: phaseId } });
   }
@@ -80,7 +87,6 @@ export class PhasesService {
     // TODO: only first milestone is needed
     const milestones = await this.milestonesService.getPhaseMilestones(
       phase.id,
-      true,
     );
 
     const [firstMilestone] = milestones;

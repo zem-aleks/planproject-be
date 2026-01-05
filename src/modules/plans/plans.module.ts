@@ -42,6 +42,12 @@ import { TasksAiService } from './tasks/services/tasks-ai.service';
     TasksService,
     TasksAiService,
   ],
-  exports: [ProjectsService, PhasesService, TasksService, ProjectsAiService],
+  exports: [
+    ProjectsService,
+    PhasesService,
+    TasksService,
+    ProjectsAiService,
+    MilestonesService,
+  ],
 })
 export class PlansModule {}

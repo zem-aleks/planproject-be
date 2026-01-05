@@ -23,7 +23,7 @@ export type MilestoneEntity = {
 
 export type MilestoneStatus = 'notStarted' | 'inProgress' | 'completed';
 
-export type MilestoneWithTasksEntity = MilestoneEntity & {
+export type MilestoneDetailsEntity = MilestoneEntity & {
   // tasks: TaskEntity[];
   phase: PhaseEntity;
 };

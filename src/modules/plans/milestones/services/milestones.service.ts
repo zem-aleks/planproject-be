@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Milestone } from '../entities/milestone.entity';
 
 @Injectable()
@@ -37,6 +37,22 @@ export class MilestonesService {
 
   async getOneById(milestoneId: string) {
     return this.repository.findOne({ where: { id: milestoneId } });
+  }
+
+  async getByIds(milestoneIds: string[]) {
+    return this.repository.find({
+      where: { id: In(milestoneIds) },
+      order: { orderIndex: 'ASC' },
+      relations: ['phase'],
+    });
+  }
+
+  async getActiveMilestones(projectId: string) {
+    return this.repository.find({
+      where: { projectId, status: 'inProgress' },
+      order: { orderIndex: 'ASC' },
+      relations: ['phase'],
+    });
   }
 
   async getOneByIdOtThrow(milestoneId: string) {
