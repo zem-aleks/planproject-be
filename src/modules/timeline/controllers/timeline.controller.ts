@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Post,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -27,6 +28,58 @@ export class TimelineController {
     private readonly plansService: PlansService,
     private readonly milestonesService: MilestonesService,
   ) {}
+
+  @Post(':projectId/extend-today') async extendToday(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (project.status === 'completed') {
+      throw new BadRequestException({
+        message: 'Project is already completed',
+        code: 'PROJECT_COMPLETED',
+      });
+    }
+
+    const projectDay = dayjs().diff(project.startedAt, 'days') + 1;
+    const timelinePoint = await this.timelineService.getTimelinePoint({
+      projectId: project.id,
+      projectDay,
+    });
+
+    if (!timelinePoint) {
+      throw new BadRequestException({
+        message: 'No existing timeline point found for this project day.',
+        code: 'NO_ACTIVE_TASKS',
+      });
+    }
+
+    const milestones = await this.milestonesService.getByIds(
+      timelinePoint.milestoneIds,
+    );
+    const status = await this.plansService.activateNextMilestone(project);
+    switch (status.type) {
+      case 'noMilestonesToStart':
+        throw new BadRequestException({
+          message: 'Project is already completed',
+          code: 'PROJECT_COMPLETED',
+        });
+
+      case 'success':
+        return this.timelineService.updateTimelinePoint({
+          project,
+          timelinePoint,
+          newMilestone: status.milestone,
+          finishedMilestones: milestones,
+        });
+
+      default:
+        return notReachable(status);
+    }
+  }
 
   @Get(':projectId/today')
   async getToday(

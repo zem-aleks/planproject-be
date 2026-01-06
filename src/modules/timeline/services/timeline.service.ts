@@ -5,6 +5,7 @@ import { TimelinePoint } from '../entities/timeline-point.entity';
 import { Project } from '../../plans/projects/entities/project.entity';
 import { TimelineAiService } from './timeline-ai.service';
 import { Milestone } from '../../plans/milestones/entities/milestone.entity';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class TimelineService {
@@ -47,6 +48,34 @@ export class TimelineService {
     });
   }
 
+  async updateTimelinePoint({
+    project,
+    timelinePoint,
+    newMilestone,
+    finishedMilestones,
+  }: {
+    project: Project;
+    timelinePoint: TimelinePoint;
+    newMilestone: Milestone;
+    finishedMilestones: Milestone[];
+  }) {
+    const projectDay = dayjs().diff(project.startedAt, 'days') + 1;
+    const comment =
+      await this.timelineAiService.generateUpdatedTimelinePointContent({
+        project,
+        newMilestone,
+        finishedMilestones,
+        projectDay,
+      });
+
+    return this.repository.save({
+      ...timelinePoint,
+      comment,
+      milestoneIds: [...timelinePoint.milestoneIds, newMilestone.id],
+      completed: false,
+    });
+  }
+
   async generateTimelinePoint({
     project,
     projectDay,
@@ -74,42 +103,5 @@ export class TimelineService {
       milestoneIds: activeMilestones.map((m) => m.id),
       completed: false,
     });
-
-    // const startedTasks = activeTasks.filter((t) => t.status === 'inProgress');
-    // if (startedTasks.length > 0) {
-    //   return this.create({
-    //     projectId: project.id,
-    //     projectDay,
-    //     comment: `You have ${startedTasks.length} tasks in progress. Focus on completing them before starting new ones.`,
-    //     taskIds: startedTasks.map((task) => task.id),
-    //     completed: false,
-    //   });
-    // }
-    //
-    // const nextTask = activeTasks[0];
-    // const sameMilestoneAndDayTasks = activeTasks.filter(
-    //   (t) => t.milestone.id === nextTask.milestone.id && t.day === nextTask.day,
-    // );
-    //
-    // if (sameMilestoneAndDayTasks.length > 0) {
-    //   const comment = await this.timelineAiService.generateTimelinePointContent(
-    //     {
-    //       previousTimelinePoint,
-    //       project,
-    //       activeTasks: sameMilestoneAndDayTasks,
-    //       projectDay,
-    //     },
-    //   );
-    //
-    //   return this.create({
-    //     projectId: project.id,
-    //     projectDay,
-    //     comment,
-    //     taskIds: sameMilestoneAndDayTasks.map((task) => task.id),
-    //     completed: false,
-    //   });
-    // }
-    //
-    // return null;
   }
 }
