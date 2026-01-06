@@ -15,16 +15,16 @@ import * as dayjs from 'dayjs';
 import { TimelineService } from '../services/timeline.service';
 import { mapTimelinePointToEntity } from '../mappers/mapTimelinePointToEntity';
 import { MilestonesService } from '../../plans/milestones/services/milestones.service';
-import { PhasesService } from '../../plans/phases/services/phases.service';
 import { mapMilestoneToEntityWithDetails } from '../../plans/milestones/mappers/mapMilestoneToEntity';
+import { PlansService } from '../../plans/services/plans.service';
+import { notReachable } from '../../../shared/utils/notReachable';
 
 @Controller('timeline')
 @UseGuards(JwtAuthGuard)
 export class TimelineController {
   constructor(
     private readonly timelineService: TimelineService,
-    // private readonly tasksService: TasksService,
-    private readonly phasesService: PhasesService,
+    private readonly plansService: PlansService,
     private readonly milestonesService: MilestonesService,
   ) {}
 
@@ -64,31 +64,23 @@ export class TimelineController {
       project.id,
     );
 
-    if (!activeMilestones.length) {
-      throw new BadRequestException({
-        message: 'No active tasks found for the project',
-        code: 'NO_ACTIVE_TASKS',
-      });
-    }
+    if (activeMilestones.length <= 0) {
+      const status = await this.plansService.activateNextMilestone(project);
+      switch (status.type) {
+        case 'noMilestonesToStart':
+          throw new BadRequestException({
+            message: 'Project is already completed',
+            code: 'PROJECT_COMPLETED',
+          });
 
-    // const activePhases = await this.phasesService.getActiveWithMilestones(
-    //   project.id,
-    // );
-    //
-    // if (!activePhases.length) {
-    //   const notStartedPhase = await this.phasesService.getFirstNotStarted(
-    //     project.id,
-    //   );
-    //
-    //   if (!notStartedPhase) {
-    //     throw new BadRequestException({
-    //       message: 'No active phases found for the project',
-    //       code: 'NO_ACTIVE_PHASES',
-    //     });
-    //   }
-    //
-    //   const startedPhase = await this.phasesService.startPhase(notStartedPhase);
-    // }
+        case 'success':
+          activeMilestones.push({ ...status.milestone, phase: status.phase });
+          break;
+
+        default:
+          return notReachable(status);
+      }
+    }
 
     const newTimelinePoint = await this.timelineService.generateTimelinePoint({
       project,

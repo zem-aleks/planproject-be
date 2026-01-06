@@ -18,7 +18,7 @@ import { mapProjectToEntity } from '../mappers/mapProjectToEntity';
 import { ProjectByIdPipe } from '../pipes/project-by-id.pipe';
 import { Project } from '../entities/project.entity';
 import { SupabaseStorageService } from '../../../supabase/supabase-storage.service';
-import { PhasesService } from '../../phases/services/phases.service';
+import { PlansService } from '../../services/plans.service';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -27,7 +27,7 @@ export class ProjectsController {
 
   constructor(
     private readonly projectsService: ProjectsService,
-    private readonly phasesService: PhasesService,
+    private readonly plansService: PlansService,
     // private readonly milestonesService: MilestonesService,
     // private readonly projectsAiService: ProjectsAiService,
     // private readonly tasksService: TasksService,
@@ -69,11 +69,7 @@ export class ProjectsController {
       startedAt: new Date(),
     });
 
-    const firstPhase = await this.phasesService.getFirstNotStarted(project.id);
-    if (firstPhase) {
-      await this.phasesService.startPhase(firstPhase);
-    }
-
+    await this.plansService.activateNextMilestone(updatedProject);
     return mapProjectToEntity(updatedProject, this.logoPath);
   }
 

@@ -19,6 +19,7 @@ import { MilestonesAiService } from './milestones/services/milestones-ai.service
 import { TasksController } from './tasks/controllers/tasks.controller';
 import { TasksService } from './tasks/services/tasks.service';
 import { TasksAiService } from './tasks/services/tasks-ai.service';
+import { PlansService } from './services/plans.service';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { TasksAiService } from './tasks/services/tasks-ai.service';
     MilestonesAiService,
     TasksService,
     TasksAiService,
+    PlansService,
   ],
   exports: [
     ProjectsService,
@@ -48,6 +50,7 @@ import { TasksAiService } from './tasks/services/tasks-ai.service';
     TasksService,
     ProjectsAiService,
     MilestonesService,
+    PlansService,
   ],
 })
 export class PlansModule {}

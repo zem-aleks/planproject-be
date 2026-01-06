@@ -87,6 +87,12 @@ export class MilestonesService {
     return this.update(milestone);
   }
 
+  async activate(milestone: Milestone) {
+    milestone.status = 'inProgress';
+    milestone.startedAt = new Date();
+    return this.update(milestone);
+  }
+
   async getPhaseMilestones(phaseId: string, withTasks?: boolean) {
     return this.repository.find({
       where: { phaseId },
