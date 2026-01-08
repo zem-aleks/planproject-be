@@ -4,6 +4,7 @@ import { MilestonesService } from '../milestones/services/milestones.service';
 import { Project } from '../projects/entities/project.entity';
 import { Milestone } from '../milestones/entities/milestone.entity';
 import { Phase } from '../phases/entities/phase.entity';
+import * as dayjs from 'dayjs';
 
 type ActivateNextMilestoneStatus =
   | { type: 'noMilestonesToStart' }
@@ -64,6 +65,48 @@ export class PlansService {
       type: 'success',
       milestone: activatedMilestone,
       phase: activatedPhase,
+    };
+  }
+
+  async getProgress(project: Project) {
+    const projectDay = dayjs().diff(project.startedAt, 'days') + 1;
+    const phases = await this.phasesService.getAll(project.id);
+    const milestones = await this.milestonesService.getAllByProject(project.id);
+    const completedMilestones = milestones.filter(
+      (m) => m.status === 'completed',
+    );
+    const activeMilestones = milestones.filter(
+      (m) => m.status === 'inProgress',
+    );
+    const completedMilestonesDaysNeeded = completedMilestones.reduce(
+      (acc, m) => acc + m.daysNeeded,
+      0,
+    );
+    const activeMilestonesDaysNeeded = activeMilestones.reduce(
+      (acc, m) => acc + m.daysNeeded,
+      0,
+    );
+
+    const projectProgress = project.daysNeeded
+      ? Math.round((completedMilestonesDaysNeeded / project.daysNeeded) * 100)
+      : 0;
+
+    const diffWithPlanDays =
+      completedMilestonesDaysNeeded + activeMilestonesDaysNeeded - projectDay;
+
+    const confirmedDiffWithPlanDays =
+      completedMilestonesDaysNeeded - projectDay;
+
+    return {
+      projectProgress,
+      diffWithPlanDays,
+      confirmedDiffWithPlanDays,
+      phasesCount: phases.length,
+      phasesCompletedCount: phases.filter((p) => p.status === 'completed')
+        .length,
+      milestonesCount: milestones.length,
+      milestonesCompletedCount: completedMilestones.length,
+      milestonesCompletedDaysNeeded: completedMilestonesDaysNeeded,
     };
   }
 }

@@ -35,6 +35,13 @@ export class MilestonesService {
     });
   }
 
+  async getAllByProject(projectId: string) {
+    return this.repository.find({
+      where: { projectId },
+      order: { orderIndex: 'ASC' },
+    });
+  }
+
   async getOneById(milestoneId: string) {
     return this.repository.findOne({ where: { id: milestoneId } });
   }

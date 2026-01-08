@@ -28,31 +28,10 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly plansService: PlansService,
-    // private readonly milestonesService: MilestonesService,
-    // private readonly projectsAiService: ProjectsAiService,
-    // private readonly tasksService: TasksService,
     private readonly storageService: SupabaseStorageService,
-    // private readonly tasksAiService: TasksAiService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
-
-  // @Post()
-  // async createProject(
-  //   @Body(new ZodValidationPipe(CREATE_PROJECT_SCHEMA))
-  //   data: ProjectCreateData,
-  //   @AuthUser() user: User,
-  // ) {
-  //   const project = await this.projectsService.create({
-  //     ...data,
-  //     summary: null,
-  //     userId: user.id,
-  //     status: 'shaping',
-  //     daysNeeded: null,
-  //     clientId: null,
-  //   });
-  //   return mapProjectToEntity(project, this.logoPath);
-  // }
 
   @Patch(':projectId/start')
   async startProject(
@@ -90,6 +69,18 @@ export class ProjectsController {
       throw new UnauthorizedException('Permissions denied');
     }
     return mapProjectToEntity(project, this.logoPath);
+  }
+
+  @Get(':projectId/progress')
+  async getProjectProgress(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    return this.plansService.getProgress(project);
   }
 
   @Patch(':projectId')
