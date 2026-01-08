@@ -25,6 +25,13 @@ export class TimelineService {
     return this.repository.save(data);
   }
 
+  async getProjectHistory(projectId: string) {
+    return this.repository.find({
+      where: { projectId },
+      order: { projectDay: 'DESC' },
+    });
+  }
+
   async getTimelinePoint({
     projectId,
     projectDay,

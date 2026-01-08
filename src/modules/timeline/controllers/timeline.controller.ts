@@ -90,12 +90,19 @@ export class TimelineController {
       throw new UnauthorizedException('Permissions denied');
     }
 
-    if (project.status === 'completed') {
+    if (project.status !== 'active') {
       throw new BadRequestException({
-        message: 'Project is already completed',
-        code: 'PROJECT_COMPLETED',
+        message: 'Project is not active',
+        code: 'PROJECT_NOT_ACTIVE',
       });
     }
+
+    // if (project.status === 'completed') {
+    //   throw new BadRequestException({
+    //     message: 'Project is already completed',
+    //     code: 'PROJECT_COMPLETED',
+    //   });
+    // }
 
     const projectDay = dayjs().diff(project.startedAt, 'days') + 1;
     const timelinePoint = await this.timelineService.getTimelinePoint({
@@ -152,5 +159,36 @@ export class TimelineController {
       newTimelinePoint,
       activeMilestones.map(mapMilestoneToEntityWithDetails),
     );
+  }
+
+  @Get(':projectId/history')
+  async getHistory(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const timelinePoints = await this.timelineService.getProjectHistory(
+      project.id,
+    );
+
+    const timelineMilestones = timelinePoints.flatMap((t) => t.milestoneIds);
+    const milestones =
+      await this.milestonesService.getByIds(timelineMilestones);
+
+    return timelinePoints.map((timelinePoint) => {
+      const pointMilestones = milestones
+        .filter((milestone) =>
+          timelinePoint.milestoneIds.includes(milestone.id),
+        )
+        .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+
+      return mapTimelinePointToEntity(
+        timelinePoint,
+        pointMilestones.map(mapMilestoneToEntityWithDetails),
+      );
+    });
   }
 }
