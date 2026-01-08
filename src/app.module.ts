@@ -23,6 +23,8 @@ import { UsersModule } from './modules/users/users.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { TimelinePoint } from './modules/timeline/entities/timeline-point.entity';
 import { TimelineModule } from './modules/timeline/timeline.module';
+import { Competitor } from './modules/competitors/entities/competitor.entity';
+import { CompetitorsModule } from './modules/competitors/competitors.module';
 
 @Module({
   imports: [
@@ -45,6 +47,7 @@ import { TimelineModule } from './modules/timeline/timeline.module';
             Task,
             User,
             TimelinePoint,
+            Competitor,
           ],
           synchronize: false,
           migrationsRun: true,
@@ -81,6 +84,7 @@ import { TimelineModule } from './modules/timeline/timeline.module';
     ShapingModule,
     UsersModule,
     TimelineModule,
+    CompetitorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
