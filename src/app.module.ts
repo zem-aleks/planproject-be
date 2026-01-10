@@ -25,6 +25,8 @@ import { TimelinePoint } from './modules/timeline/entities/timeline-point.entity
 import { TimelineModule } from './modules/timeline/timeline.module';
 import { Competitor } from './modules/competitors/entities/competitor.entity';
 import { CompetitorsModule } from './modules/competitors/competitors.module';
+import { AuditoryModule } from './modules/auditory/auditory.module';
+import { Auditory } from './modules/auditory/entities/auditory.entity';
 
 @Module({
   imports: [
@@ -48,6 +50,7 @@ import { CompetitorsModule } from './modules/competitors/competitors.module';
             User,
             TimelinePoint,
             Competitor,
+            Auditory,
           ],
           synchronize: false,
           migrationsRun: true,
@@ -85,6 +88,7 @@ import { CompetitorsModule } from './modules/competitors/competitors.module';
     UsersModule,
     TimelineModule,
     CompetitorsModule,
+    AuditoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
