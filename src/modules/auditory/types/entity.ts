@@ -28,17 +28,3 @@ export type AuditoryEntity = {
   differentiation: string | null;
   auditoryChannels: string | null;
 };
-
-// menPercentage
-// ageSeparation
-
-// tam
-// sam
-// som
-
-// mainSegments
-// characters
-// auditoryDemands
-// auditoryPains
-// differentiation
-// auditoryChannels
