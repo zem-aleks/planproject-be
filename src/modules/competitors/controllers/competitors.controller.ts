@@ -32,13 +32,6 @@ export class CompetitorsController {
       throw new UnauthorizedException('Permissions denied');
     }
 
-    if (project.status !== 'active') {
-      throw new BadRequestException({
-        message: 'Project is not active',
-        code: 'PROJECT_NOT_ACTIVE',
-      });
-    }
-
     const competitors = await this.competitorsService.getAll(project.id);
     if (competitors.length > 0) {
       return competitors.map(mapCompetitorToEntity);

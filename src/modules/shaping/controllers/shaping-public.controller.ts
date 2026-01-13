@@ -121,7 +121,7 @@ export class ShapingPublicController {
       status: 'started',
     });
 
-    const { followUpQuestion, assistantComment, score } =
+    const { followUpQuestion, followUpAnswers, assistantComment, score } =
       await this.shapingAiService.processShapingData(shaping, 'gpt-4o-mini');
 
     const updatedShaping = await this.shapingService.addAssistantMessage({
@@ -129,6 +129,7 @@ export class ShapingPublicController {
       message: followUpQuestion,
       comment: assistantComment,
       score,
+      followUpAnswers,
     });
 
     return mapShapingToEntity(updatedShaping);
@@ -243,7 +244,7 @@ export class ShapingPublicController {
       shaping,
     });
 
-    const { followUpQuestion, score, assistantComment } =
+    const { followUpQuestion, followUpAnswers, score, assistantComment } =
       await this.shapingAiService.processShapingData(
         shapingWithMessage,
         'gpt-4o-mini',
@@ -254,6 +255,7 @@ export class ShapingPublicController {
       message: followUpQuestion,
       comment: assistantComment,
       score,
+      followUpAnswers,
     });
 
     return mapShapingToEntity(updatedShaping);

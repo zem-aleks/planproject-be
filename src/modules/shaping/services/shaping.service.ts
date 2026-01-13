@@ -84,11 +84,13 @@ export class ShapingService {
     message,
     comment,
     score,
+    followUpAnswers,
   }: {
     shaping: Shaping;
     message: string;
     comment: string;
     score: number;
+    followUpAnswers: string[];
   }) {
     const assistantMessageId =
       Math.max(...shaping.messages.map((msg) => msg.id)) + 1;
@@ -98,7 +100,10 @@ export class ShapingService {
       role: 'assistant',
       content: message,
       comment,
+      answers: followUpAnswers,
     };
+
+    console.log(assistantMessage);
 
     return this.repository.save({
       ...shaping,

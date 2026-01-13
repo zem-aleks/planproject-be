@@ -17,6 +17,15 @@ export class ShapingAiService {
     const structuredModel = model.withStructuredOutput(
       z.object({
         followUpQuestion: z.string().describe('A short follow-up question'),
+        followUpAnswers: z
+          .array(
+            z
+              .string()
+              .describe('A possible short answer to the follow-up question'),
+          )
+          .describe(
+            'A list of possible answers to the follow-up question. Up to 3 options',
+          ),
         assistantComment: z.string().describe('Assistant comment'),
         score: z
           .number()
@@ -50,6 +59,7 @@ User provides details about their idea, and you need to:
 8. Never repeat the questions! Negative or empty answers means that it's additional topic for investigation during the project planning phase.
 9. Once the score reaches 100, ask if a user wants to share some additional details that could help to make the idea even clearer. Also mention that we can start the process of project planing.
 10. Don't be stubborn. If the user provides a good answer that helps to increase the score, accept it and move on. If user has no information about some topic, just move on. You can still increase the score by providing good answers to other questions.
+11. Suggest possible answers to the follow-up question. Keep it short and to the point.
 
 Current score: ${shaping.score}
 Do not decrease the score. Every answer should be aimed to keep or increase the score.

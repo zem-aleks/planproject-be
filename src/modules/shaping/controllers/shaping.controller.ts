@@ -88,7 +88,7 @@ export class ShapingController {
       projectId: project.id,
     });
 
-    const { followUpQuestion, assistantComment, score } =
+    const { followUpQuestion, followUpAnswers, assistantComment, score } =
       await this.shapingAiService.processShapingData(
         updatedShaping,
         'gpt-4o-mini',
@@ -99,6 +99,7 @@ export class ShapingController {
       message: followUpQuestion,
       comment: assistantComment,
       score,
+      followUpAnswers,
     });
 
     return mapShapingToEntity(shapingWithMessage);
@@ -120,7 +121,7 @@ export class ShapingController {
       shaping,
     });
 
-    const { followUpQuestion, score, assistantComment } =
+    const { followUpQuestion, followUpAnswers, score, assistantComment } =
       await this.shapingAiService.processShapingData(
         shapingWithMessage,
         'gpt-4o-mini',
@@ -131,6 +132,7 @@ export class ShapingController {
       message: followUpQuestion,
       comment: assistantComment,
       score,
+      followUpAnswers,
     });
 
     return mapShapingToEntity(updatedShaping);

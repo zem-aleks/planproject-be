@@ -33,13 +33,6 @@ export class AuditoryController {
       throw new UnauthorizedException('Permissions denied');
     }
 
-    if (project.status !== 'active') {
-      throw new BadRequestException({
-        message: 'Project is not active',
-        code: 'PROJECT_NOT_ACTIVE',
-      });
-    }
-
     return this.auditoryService.getOrCreate(project.id);
   }
 
@@ -50,13 +43,6 @@ export class AuditoryController {
   ) {
     if (project.userId !== user.id) {
       throw new UnauthorizedException('Permissions denied');
-    }
-
-    if (project.status !== 'active') {
-      throw new BadRequestException({
-        message: 'Project is not active',
-        code: 'PROJECT_NOT_ACTIVE',
-      });
     }
 
     const auditory = await this.auditoryService.find(project.id);
@@ -86,13 +72,6 @@ export class AuditoryController {
   ) {
     if (project.userId !== user.id) {
       throw new UnauthorizedException('Permissions denied');
-    }
-
-    if (project.status !== 'active') {
-      throw new BadRequestException({
-        message: 'Project is not active',
-        code: 'PROJECT_NOT_ACTIVE',
-      });
     }
 
     const auditory = await this.auditoryService.find(project.id);
