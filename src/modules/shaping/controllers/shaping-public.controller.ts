@@ -45,18 +45,14 @@ export class ShapingPublicController {
     //   throw new UnauthorizedException('Permissions denied');
     // }
 
-    await this.projectsService.update({
-      ...project,
+    await this.projectsService.updatePartial(project.id, {
       logoUrl: 'loading',
     });
 
     const base64 = await this.projectsAiService.generateLogo(project);
     if (!base64) {
-      const updatedProject = await this.projectsService.update({
-        ...project,
-        logoUrl: null,
-      });
-      return mapProjectToEntity(updatedProject, this.logoPath);
+      await this.projectsService.updatePartial(project.id, { logoUrl: null });
+      return mapProjectToEntity({ ...project, logoUrl: null }, this.logoPath);
     }
 
     const buffer = Buffer.from(base64, 'base64');
@@ -70,19 +66,18 @@ export class ShapingPublicController {
 
     switch (uploadState.type) {
       case 'error': {
-        const updatedProject = await this.projectsService.update({
-          ...project,
-          logoUrl: null,
-        });
-        return mapProjectToEntity(updatedProject, this.logoPath);
+        await this.projectsService.updatePartial(project.id, { logoUrl: null });
+        return mapProjectToEntity({ ...project, logoUrl: null }, this.logoPath);
       }
 
       case 'success': {
-        const updatedProject = await this.projectsService.update({
-          ...project,
+        await this.projectsService.updatePartial(project.id, {
           logoUrl: uploadState.url,
         });
-        return mapProjectToEntity(updatedProject, this.logoPath);
+        return mapProjectToEntity(
+          { ...project, logoUrl: uploadState.url },
+          this.logoPath,
+        );
       }
 
       default:

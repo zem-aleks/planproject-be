@@ -20,6 +20,10 @@ export class ProjectsService {
     return this.repository.save(data);
   }
 
+  async updatePartial(projectId: string, data: Partial<Project>) {
+    return this.repository.update(projectId, data);
+  }
+
   async getAll(userId: string) {
     return this.repository.find({
       where: { userId },
