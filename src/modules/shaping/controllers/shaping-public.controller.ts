@@ -132,7 +132,9 @@ export class ShapingPublicController {
 
   @Get(':clientId')
   async getShaping(@Param('clientId', ParseUUIDPipe) clientId: string) {
-    const shapes = await this.shapingService.getAllByClientId(clientId);
+    const shapes =
+      await this.shapingService.getAllNotConnectedByClientId(clientId);
+
     if (shapes.length > 0) {
       return mapShapingToEntity(shapes[0]);
     }
@@ -189,8 +191,8 @@ export class ShapingPublicController {
       daysNeeded: null,
     });
 
-    await this.shapingService.update({
-      ...shaping,
+    await this.shapingService.updatePartial(shaping.id, {
+      projectId: project.id,
       status: 'finished',
     });
 

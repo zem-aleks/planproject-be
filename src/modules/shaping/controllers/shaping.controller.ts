@@ -43,6 +43,54 @@ export class ShapingController {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
 
+  @Post('bind/:shapingId')
+  async bindShaping(
+    @Body('clientId', ParseUUIDPipe) clientId: string,
+    @Param('shapingId', ParseUUIDPipe) shapingId: string,
+    @AuthUser() user: User,
+  ) {
+    const shape = await this.shapingService.getByIdAndClientId(
+      shapingId,
+      clientId,
+    );
+
+    if (!shape) {
+      throw new NotFoundException('Shaping not found.');
+    }
+
+    if (!shape.projectId) {
+      const projectName = `New project (${dayjs().format('YYYY-MM-DD HH:mm')})`;
+      const project = await this.projectsService.create({
+        title: projectName,
+        clientId,
+        shapingId: shape.id,
+        userId: user.id,
+        status: 'draft',
+        description: null,
+        summary: null,
+        logoUrl: null,
+        daysNeeded: null,
+      });
+
+      await this.shapingService.updatePartial(shape.id, {
+        projectId: project.id,
+        userId: user.id,
+      });
+      return mapProjectToEntity(project, this.logoPath);
+    }
+
+    await this.shapingService.updatePartial(shape.id, {
+      userId: user.id,
+    });
+
+    const project = await this.projectsService.getOneById(shape.projectId);
+    if (!project) {
+      throw new NotFoundException('Project not found.');
+    }
+    await this.projectsService.updatePartial(project.id, { userId: user.id });
+    return mapProjectToEntity(project, this.logoPath);
+  }
+
   @Post()
   async createShaping(
     @Body('message') message: string,

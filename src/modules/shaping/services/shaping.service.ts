@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Shaping } from '../entities/shaping.entity';
 import { AssistantMessage, UserMessage } from '../types/entity';
 
@@ -21,8 +21,20 @@ export class ShapingService {
     return this.repository.save(data);
   }
 
+  async updatePartial(id: string, data: Partial<Shaping>) {
+    return this.repository.update(id, data);
+  }
+
   async getAllByClientId(clientId: string) {
     return this.repository.find({ where: { clientId } });
+  }
+
+  async getByIdAndClientId(id: string, clientId: string) {
+    return this.repository.findOne({ where: { id, clientId } });
+  }
+
+  async getAllNotConnectedByClientId(clientId: string) {
+    return this.repository.find({ where: { clientId, userId: IsNull() } });
   }
 
   async getOneByProjectId({
