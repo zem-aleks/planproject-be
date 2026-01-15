@@ -95,13 +95,9 @@ export class PhasesController {
       throw new NotFoundException('Phase is not started');
     }
 
-    const updatedPhase = await this.phasesService.update({
-      ...phase,
-      status: 'completed',
-      completedAt: new Date(),
-    });
+    await this.phasesService.complete(phase.id, project);
 
-    return mapPhaseToEntity(updatedPhase);
+    return mapPhaseToEntity({ ...phase, status: 'completed' });
   }
 
   @Delete(':phaseId')

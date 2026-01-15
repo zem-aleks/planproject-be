@@ -4,7 +4,7 @@ import { MilestonesService } from '../milestones/services/milestones.service';
 import { Project } from '../projects/entities/project.entity';
 import { Milestone } from '../milestones/entities/milestone.entity';
 import { Phase } from '../phases/entities/phase.entity';
-import * as dayjs from 'dayjs';
+import { getProjectDay } from '../projects/helpers/getProjectDay';
 
 type ActivateNextMilestoneStatus =
   | { type: 'noMilestonesToStart' }
@@ -69,7 +69,7 @@ export class PlansService {
   }
 
   async getProgress(project: Project) {
-    const projectDay = dayjs().diff(project.startedAt, 'days') + 1;
+    const projectDay = getProjectDay(project);
     const phases = await this.phasesService.getAll(project.id);
     const milestones = await this.milestonesService.getAllByProject(project.id);
     const completedMilestones = milestones.filter(

@@ -33,6 +33,7 @@ import {
 import { CustomRequest } from '../../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../../users/pipes/user.pipe';
 import { MilestoneDetailsEntity } from '../types/entity';
+import { getProjectDay } from '../../projects/helpers/getProjectDay';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -270,6 +271,7 @@ export class MilestonesController {
     const project = await this.projectsService.getOneByIdOrThrow(
       phase.projectId,
     );
+    const projectDay = getProjectDay(project);
 
     if (project.userId !== user.id) {
       throw new UnauthorizedException('Permissions denied');
@@ -282,14 +284,15 @@ export class MilestonesController {
     const completedMilestone = await this.milestonesService.completeMilestone({
       milestone,
       message,
+      projectDay,
     });
 
-    const tasks = await this.tasksService.getAllByMilestoneId(milestone.id);
-    const incompleteTasks = tasks.filter((task) => task.status !== 'completed');
-    const promises = incompleteTasks.map((task) =>
-      this.tasksService.completeTask({ task, message: '' }),
-    );
-    await Promise.all(promises);
+    const isPhaseCompleted =
+      await this.milestonesService.areAllMilestonesCompleted(phase.id);
+
+    if (isPhaseCompleted) {
+      await this.phasesService.complete(phase.id, project);
+    }
 
     return mapMilestoneToEntity(completedMilestone);
   }

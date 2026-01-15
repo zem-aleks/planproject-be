@@ -12,13 +12,13 @@ import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
 import { Project } from '../../plans/projects/entities/project.entity';
-import * as dayjs from 'dayjs';
 import { TimelineService } from '../services/timeline.service';
 import { mapTimelinePointToEntity } from '../mappers/mapTimelinePointToEntity';
 import { MilestonesService } from '../../plans/milestones/services/milestones.service';
 import { mapMilestoneToEntityWithDetails } from '../../plans/milestones/mappers/mapMilestoneToEntity';
 import { PlansService } from '../../plans/services/plans.service';
 import { notReachable } from '../../../shared/utils/notReachable';
+import { getProjectDay } from '../../plans/projects/helpers/getProjectDay';
 
 @Controller('timeline')
 @UseGuards(JwtAuthGuard)
@@ -44,7 +44,7 @@ export class TimelineController {
       });
     }
 
-    const projectDay = dayjs().diff(project.startedAt, 'days') + 1;
+    const projectDay = getProjectDay(project);
     const timelinePoint = await this.timelineService.getTimelinePoint({
       projectId: project.id,
       projectDay,
@@ -104,7 +104,7 @@ export class TimelineController {
     //   });
     // }
 
-    const projectDay = dayjs().diff(project.startedAt, 'days') + 1;
+    const projectDay = getProjectDay(project);
     const timelinePoint = await this.timelineService.getTimelinePoint({
       projectId: project.id,
       projectDay,

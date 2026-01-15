@@ -5,7 +5,7 @@ import { TimelinePoint } from '../entities/timeline-point.entity';
 import { Project } from '../../plans/projects/entities/project.entity';
 import { TimelineAiService } from './timeline-ai.service';
 import { Milestone } from '../../plans/milestones/entities/milestone.entity';
-import * as dayjs from 'dayjs';
+import { getProjectDay } from '../../plans/projects/helpers/getProjectDay';
 
 @Injectable()
 export class TimelineService {
@@ -66,7 +66,7 @@ export class TimelineService {
     newMilestone: Milestone;
     finishedMilestones: Milestone[];
   }) {
-    const projectDay = dayjs().diff(project.startedAt, 'days') + 1;
+    const projectDay = getProjectDay(project);
     const comment =
       await this.timelineAiService.generateUpdatedTimelinePointContent({
         project,
@@ -109,6 +109,32 @@ export class TimelineService {
       comment,
       milestoneIds: activeMilestones.map((m) => m.id),
       completed: false,
+    });
+  }
+
+  async registerMilestonesCompletion({
+    projectId,
+    projectDay,
+    milestoneIds,
+  }: {
+    projectId: string;
+    projectDay: number;
+    milestoneIds: string[];
+  }) {
+    const point = await this.getTimelinePoint({ projectId, projectDay });
+    if (!point) {
+      return this.create({
+        projectId,
+        projectDay,
+        comment: '',
+        milestoneIds,
+        completed: false,
+      });
+    }
+
+    return this.update({
+      ...point,
+      milestoneIds: [...point.milestoneIds, ...milestoneIds],
     });
   }
 }

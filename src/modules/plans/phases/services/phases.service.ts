@@ -6,12 +6,15 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Phase } from '../entities/phase.entity';
+import { MilestonesService } from '../../milestones/services/milestones.service';
+import { Project } from '../../projects/entities/project.entity';
 
 @Injectable()
 export class PhasesService {
   constructor(
     @InjectRepository(Phase)
     private readonly repository: Repository<Phase>,
+    private readonly milestonesService: MilestonesService,
   ) {}
 
   async create(
@@ -30,17 +33,21 @@ export class PhasesService {
     return this.repository.save(data);
   }
 
+  async updatePartial(phaseId: string, data: Partial<Phase>) {
+    return this.repository.update(phaseId, data);
+  }
+
   async getAll(projectId: string) {
     return this.repository.find({
       where: { projectId },
-      order: { timelineStartDay: 'ASC' },
+      order: { timelineStartDay: 'ASC', id: 'ASC' },
     });
   }
 
   async getAllWithMilestones(projectId: string) {
     return this.repository.find({
       where: { projectId },
-      order: { timelineStartDay: 'ASC' },
+      order: { timelineStartDay: 'ASC', id: 'ASC' },
       relations: ['milestones'],
     });
   }
@@ -48,14 +55,14 @@ export class PhasesService {
   async getFirstNotStarted(projectId: string) {
     return this.repository.findOne({
       where: { projectId, status: 'notStarted' },
-      order: { timelineStartDay: 'ASC' },
+      order: { timelineStartDay: 'ASC', id: 'ASC' },
     });
   }
 
   async getActiveWithMilestones(projectId: string) {
     return this.repository.find({
       where: { projectId, status: 'inProgress' },
-      order: { timelineStartDay: 'ASC' },
+      order: { timelineStartDay: 'ASC', id: 'ASC' },
     });
   }
 
@@ -84,6 +91,25 @@ export class PhasesService {
       ...phase,
       status: 'inProgress',
       startedAt: new Date(),
+    });
+  }
+
+  async complete(phaseId: string, project: Project) {
+    const milestones = await this.milestonesService.getPhaseMilestones(phaseId);
+    const notCompletedMilestones = milestones
+      .filter((m) => m.status !== 'completed')
+      .map((m) => m.id);
+
+    if (notCompletedMilestones.length > 0) {
+      await this.milestonesService.completeMilestones(
+        notCompletedMilestones,
+        project,
+      );
+    }
+
+    return this.updatePartial(phaseId, {
+      status: 'completed',
+      completedAt: new Date(),
     });
   }
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TimelineService } from './services/timeline.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TimelineController } from './controllers/timeline.controller';
@@ -11,10 +11,10 @@ import { PlansModule } from '../plans/plans.module';
   imports: [
     TypeOrmModule.forFeature([TimelinePoint]),
     UsersModule,
-    PlansModule,
+    forwardRef(() => PlansModule),
   ],
   controllers: [TimelineController],
   providers: [TimelineService, TimelineAiService],
-  exports: [],
+  exports: [TimelineService],
 })
 export class TimelineModule {}

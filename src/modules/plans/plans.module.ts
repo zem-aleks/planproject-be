@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -20,12 +20,14 @@ import { TasksController } from './tasks/controllers/tasks.controller';
 import { TasksService } from './tasks/services/tasks.service';
 import { TasksAiService } from './tasks/services/tasks-ai.service';
 import { PlansService } from './services/plans.service';
+import { TimelineModule } from '../timeline/timeline.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Project, Phase, Milestone, Task]),
     UsersModule,
     SupabaseModule,
+    forwardRef(() => TimelineModule),
   ],
   controllers: [
     ProjectsController,
