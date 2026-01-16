@@ -70,6 +70,7 @@ export class ShapingController {
         summary: null,
         logoUrl: null,
         daysNeeded: null,
+        completedAt: null,
       });
 
       await this.shapingService.updatePartial(shape.id, {
@@ -129,6 +130,7 @@ export class ShapingController {
       summary: null,
       logoUrl: null,
       daysNeeded: null,
+      completedAt: null,
     });
 
     const updatedShaping = await this.shapingService.update({

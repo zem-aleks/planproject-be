@@ -50,4 +50,11 @@ export class ProjectsService {
   async softDelete(projectId: string) {
     return this.repository.softDelete(projectId);
   }
+
+  async complete(projectId: string) {
+    return this.updatePartial(projectId, {
+      status: 'completed',
+      completedAt: new Date(),
+    });
+  }
 }

@@ -13,6 +13,7 @@ export const mapProjectToEntity = (
     startedAt: project.startedAt,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
+    completedAt: project.completedAt,
     userId: project.userId,
     shapingId: project.shapingId,
     daysNeeded: project.daysNeeded,

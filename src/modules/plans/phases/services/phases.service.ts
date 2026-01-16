@@ -4,10 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { Phase } from '../entities/phase.entity';
 import { MilestonesService } from '../../milestones/services/milestones.service';
 import { Project } from '../../projects/entities/project.entity';
+import { ProjectsService } from '../../projects/services/projects.service';
 
 @Injectable()
 export class PhasesService {
@@ -15,6 +16,7 @@ export class PhasesService {
     @InjectRepository(Phase)
     private readonly repository: Repository<Phase>,
     private readonly milestonesService: MilestonesService,
+    private readonly projectsService: ProjectsService,
   ) {}
 
   async create(
@@ -94,6 +96,14 @@ export class PhasesService {
     });
   }
 
+  async areAllPhasesCompleted(projectId: string) {
+    const notCompletedCount = await this.repository.count({
+      where: { projectId, status: Not('completed') },
+    });
+
+    return notCompletedCount === 0;
+  }
+
   async complete(phaseId: string, project: Project) {
     const milestones = await this.milestonesService.getPhaseMilestones(phaseId);
     const notCompletedMilestones = milestones
@@ -105,6 +115,11 @@ export class PhasesService {
         notCompletedMilestones,
         project,
       );
+    }
+
+    const isProjectCompleted = await this.areAllPhasesCompleted(project.id);
+    if (isProjectCompleted) {
+      await this.projectsService.complete(project.id);
     }
 
     return this.updatePartial(phaseId, {

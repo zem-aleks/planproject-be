@@ -55,4 +55,7 @@ export class Project {
 
   @DeleteDateColumn()
   deletedAt?: Date;
+
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  completedAt: Date | null;
 }

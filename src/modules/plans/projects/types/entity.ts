@@ -11,6 +11,7 @@ export type ProjectEntity = {
   createdAt: Date;
   updatedAt: Date;
   startedAt: Date;
+  completedAt: Date | null;
   status: ProjectStatus;
 };
 

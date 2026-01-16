@@ -189,6 +189,7 @@ export class ShapingPublicController {
       userId: null,
       logoUrl: null,
       daysNeeded: null,
+      completedAt: null,
     });
 
     await this.shapingService.updatePartial(shaping.id, {
