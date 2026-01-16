@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Param,
   ParseUUIDPipe,
@@ -90,16 +89,16 @@ export class ShapingPublicController {
     @Body('message') message: string,
     @Body('clientId', ParseUUIDPipe) clientId: string,
   ) {
-    const shapes = await this.shapingService.getAllByClientId(clientId);
+    // const shapes = await this.shapingService.getAllByClientId(clientId);
     if (!message || message.trim().length === 0) {
       throw new BadRequestException('Message is required');
     }
 
-    if (shapes.length > 0) {
-      throw new ForbiddenException(
-        'You already have a started project. Only one project is available without registration.',
-      );
-    }
+    // if (shapes.length > 0) {
+    //   throw new ForbiddenException(
+    //     'You already have a started project. Only one project is available without registration.',
+    //   );
+    // }
 
     const shaping = await this.shapingService.create({
       projectId: null,
