@@ -26,7 +26,8 @@ Context: ${project.summary}
 
 Make image in minimalistic style, with simple shapes and limited colors.
 Don't include any text in the image.
-Make it as simple as possible, so it can be easily recognized and remembered.
+Make it as simple, cool and recognizable.
+Never use human parts, like head, hands, brain or smiles. 
 `;
 
     const response = await openai.images.generate({

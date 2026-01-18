@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Controller,
   Get,
   Param,
@@ -13,15 +12,11 @@ import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
 import { Project } from '../../plans/projects/entities/project.entity';
 import { CompetitorsService } from '../services/competitors.service';
 import { mapCompetitorToEntity } from '../mappers/mapCompetitorToEntity';
-import { CompetitorsAiService } from '../services/competitors-ai.service';
 
 @Controller('competitors')
 @UseGuards(JwtAuthGuard)
 export class CompetitorsController {
-  constructor(
-    private readonly competitorsService: CompetitorsService,
-    private readonly competitorsAiService: CompetitorsAiService,
-  ) {}
+  constructor(private readonly competitorsService: CompetitorsService) {}
 
   @Get(':projectId')
   async getCompetitors(
@@ -37,15 +32,8 @@ export class CompetitorsController {
       return competitors.map(mapCompetitorToEntity);
     }
 
-    const competitorsData =
-      await this.competitorsAiService.generateCompetitorsContent({ project });
-
-    const createdCompetitors = await this.competitorsService.createMany(
-      competitorsData.map((competitorData) => ({
-        ...competitorData,
-        projectId: project.id,
-      })),
-    );
+    const createdCompetitors =
+      await this.competitorsService.generateForProject(project);
 
     return createdCompetitors.map(mapCompetitorToEntity);
   }

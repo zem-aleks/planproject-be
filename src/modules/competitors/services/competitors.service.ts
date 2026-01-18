@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Competitor } from '../entities/competitor.entity';
+import { Project } from '../../plans/projects/entities/project.entity';
+import { CompetitorsAiService } from './competitors-ai.service';
 
 @Injectable()
 export class CompetitorsService {
   constructor(
     @InjectRepository(Competitor)
     private readonly repository: Repository<Competitor>,
+    private readonly competitorsAiService: CompetitorsAiService,
   ) {}
 
   async getAll(projectId: string) {
@@ -23,5 +26,17 @@ export class CompetitorsService {
     >,
   ): Promise<Competitor[]> {
     return this.repository.save(data);
+  }
+
+  async generateForProject(project: Project): Promise<Competitor[]> {
+    const competitorsData =
+      await this.competitorsAiService.generateCompetitorsContent({ project });
+
+    return this.createMany(
+      competitorsData.map((competitorData) => ({
+        ...competitorData,
+        projectId: project.id,
+      })),
+    );
   }
 }

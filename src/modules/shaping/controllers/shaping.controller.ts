@@ -18,7 +18,6 @@ import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
 import { ShapingAiService } from '../services/shaping-ai.service';
 import { ProjectsService } from '../../plans/projects/services/projects.service';
-import { PhasesService } from '../../plans/phases/services/phases.service';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
 import { mapProjectToEntity } from '../../plans/projects/mappers/mapProjectToEntity';
 import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
@@ -26,7 +25,6 @@ import { Project } from '../../plans/projects/entities/project.entity';
 import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../users/pipes/user.pipe';
 import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
-import * as dayjs from 'dayjs';
 
 @Controller('shaping')
 @UseGuards(JwtAuthGuard)
@@ -37,7 +35,6 @@ export class ShapingController {
     private readonly shapingService: ShapingService,
     private readonly shapingAiService: ShapingAiService,
     private readonly projectsService: ProjectsService,
-    private readonly phasesService: PhasesService,
     private readonly storageService: SupabaseStorageService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
@@ -59,18 +56,10 @@ export class ShapingController {
     }
 
     if (!shape.projectId) {
-      const projectName = `New project (${dayjs().format('YYYY-MM-DD HH:mm')})`;
-      const project = await this.projectsService.create({
-        title: projectName,
+      const project = await this.projectsService.createDraft({
         clientId,
         shapingId: shape.id,
         userId: user.id,
-        status: 'draft',
-        description: null,
-        summary: null,
-        logoUrl: null,
-        daysNeeded: null,
-        completedAt: null,
       });
 
       await this.shapingService.updatePartial(shape.id, {
@@ -104,7 +93,6 @@ export class ShapingController {
 
     // TODO: verify if new shaping can be created
 
-    const projectName = `New project (${dayjs().format('YYYY-MM-DD HH:mm')})`;
     const shaping = await this.shapingService.create({
       projectId: null,
       userId: user.id,
@@ -120,17 +108,10 @@ export class ShapingController {
       status: 'started',
     });
 
-    const project = await this.projectsService.create({
-      title: projectName,
+    const project = await this.projectsService.createDraft({
       clientId,
       shapingId: shaping.id,
       userId: user.id,
-      status: 'draft',
-      description: null,
-      summary: null,
-      logoUrl: null,
-      daysNeeded: null,
-      completedAt: null,
     });
 
     const updatedShaping = await this.shapingService.update({
@@ -240,51 +221,12 @@ export class ShapingController {
       throw new BadRequestException('Project not found.');
     }
 
-    const projectSummary =
-      await this.shapingAiService.summarizeProjectDescription(shaping);
-
-    const updatedProject = await this.projectsService.update({
-      ...project,
-      title: projectSummary.projectTitle,
-      description: projectSummary.projectDescription,
-      summary: projectSummary.projectSummary,
-      clientId: shaping.clientId,
-      shapingId: shaping.id,
-      status: 'shaping',
+    const updatedProject = await this.shapingService.startProjectShaping({
+      project,
+      shaping,
     });
 
-    await this.shapingService.update({
-      ...shaping,
-      status: 'finished',
-    });
-
-    const { projectPhases } =
-      await this.shapingAiService.summarizeProjectPhases(updatedProject);
-
-    const phases = await this.phasesService.createMany(
-      projectPhases.map((phase) => ({
-        projectId: project.id,
-        title: phase.phaseTitle,
-        description: phase.phaseDescription,
-        minDaysNeeded: phase.minDaysNeeded,
-        maxDaysNeeded: phase.maxDaysNeeded,
-        expertiseNeeded: phase.expertiseNeeded,
-        timelineStartDay: phase.timelineStartDay,
-        timelineEndDay: phase.timelineEndDay,
-        status: 'building',
-        startedAt: new Date(),
-        completedAt: null,
-      })),
-    );
-
-    const endOfTimeline = Math.max(...phases.map((p) => p.timelineEndDay), 0);
-    const newProject = await this.projectsService.update({
-      ...updatedProject,
-      daysNeeded: endOfTimeline,
-      status: 'analyzing',
-    });
-
-    return mapProjectToEntity(newProject, this.logoPath);
+    return mapProjectToEntity(updatedProject, this.logoPath);
   }
 
   @Get('/project/:projectId')

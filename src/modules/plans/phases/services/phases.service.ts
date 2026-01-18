@@ -9,6 +9,7 @@ import { Phase } from '../entities/phase.entity';
 import { MilestonesService } from '../../milestones/services/milestones.service';
 import { Project } from '../../projects/entities/project.entity';
 import { ProjectsService } from '../../projects/services/projects.service';
+import { PhasesAiService } from './phases-ai.service';
 
 @Injectable()
 export class PhasesService {
@@ -17,6 +18,7 @@ export class PhasesService {
     private readonly repository: Repository<Phase>,
     private readonly milestonesService: MilestonesService,
     private readonly projectsService: ProjectsService,
+    private readonly phasesAiService: PhasesAiService,
   ) {}
 
   async create(
@@ -126,5 +128,25 @@ export class PhasesService {
       status: 'completed',
       completedAt: new Date(),
     });
+  }
+
+  async generateForProject(project: Project) {
+    const { projectPhases } =
+      await this.phasesAiService.summarizeProjectPhases(project);
+    return this.createMany(
+      projectPhases.map((phase) => ({
+        projectId: project.id,
+        title: phase.phaseTitle,
+        description: phase.phaseDescription,
+        minDaysNeeded: phase.minDaysNeeded,
+        maxDaysNeeded: phase.maxDaysNeeded,
+        expertiseNeeded: phase.expertiseNeeded,
+        timelineStartDay: phase.timelineStartDay,
+        timelineEndDay: phase.timelineEndDay,
+        status: 'building',
+        startedAt: new Date(),
+        completedAt: null,
+      })),
+    );
   }
 }

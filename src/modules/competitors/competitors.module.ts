@@ -6,11 +6,16 @@ import { CompetitorsAiService } from './services/competitors-ai.service';
 import { Competitor } from './entities/competitor.entity';
 import { UsersModule } from '../users/users.module';
 import { PlansModule } from '../plans/plans.module';
+import { ProjectAnalyzingStartedListener } from './listeners/project-analyzing-started.listener';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Competitor]), UsersModule, PlansModule],
   controllers: [CompetitorsController],
-  providers: [CompetitorsService, CompetitorsAiService],
+  providers: [
+    CompetitorsService,
+    CompetitorsAiService,
+    ProjectAnalyzingStartedListener,
+  ],
   exports: [],
 })
 export class CompetitorsModule {}

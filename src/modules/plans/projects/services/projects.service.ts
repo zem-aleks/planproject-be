@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class ProjectsService {
@@ -55,6 +56,30 @@ export class ProjectsService {
     return this.updatePartial(projectId, {
       status: 'completed',
       completedAt: new Date(),
+    });
+  }
+
+  async createDraft({
+    shapingId,
+    clientId,
+    userId,
+  }: {
+    shapingId: string;
+    clientId: string;
+    userId: string | null;
+  }) {
+    const projectName = `New project (${dayjs().format('YYYY-MM-DD HH:mm')})`;
+    return this.create({
+      title: projectName,
+      clientId,
+      shapingId,
+      userId,
+      status: 'draft',
+      description: null,
+      summary: null,
+      logoUrl: null,
+      daysNeeded: null,
+      completedAt: null,
     });
   }
 }

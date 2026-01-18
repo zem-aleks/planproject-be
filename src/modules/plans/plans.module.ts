@@ -21,6 +21,7 @@ import { TasksService } from './tasks/services/tasks.service';
 import { TasksAiService } from './tasks/services/tasks-ai.service';
 import { PlansService } from './services/plans.service';
 import { TimelineModule } from '../timeline/timeline.module';
+import { ProjectShapingStartedListener } from './listeners/project-shaping-started.listener';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { TimelineModule } from '../timeline/timeline.module';
     TasksService,
     TasksAiService,
     PlansService,
+    ProjectShapingStartedListener,
   ],
   exports: [
     ProjectsService,

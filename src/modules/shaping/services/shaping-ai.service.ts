@@ -8,7 +8,6 @@ import {
 } from '@langchain/core/messages';
 import { z } from 'zod';
 import { getLangchainMessages } from '../../ai/helpers/getLangchainMessages';
-import { Project } from '../../plans/projects/entities/project.entity';
 
 @Injectable()
 export class ShapingAiService {
@@ -77,61 +76,6 @@ Try to challenge different aspects of the idea for 5 turns only.
 `,
       ),
       ...langchainMessages,
-    ]);
-  }
-
-  async summarizeProjectPhases(project: Project) {
-    const model = getModel('gpt-4.1-mini', 0.5);
-    const structuredModel = model.withStructuredOutput(
-      z.object({
-        projectPhases: z
-          .array(
-            z.object({
-              phaseTitle: z.string().describe('Title of the project phase'),
-              phaseDescription: z
-                .string()
-                .describe('Description of the project phase'),
-              minDaysNeeded: z
-                .number()
-                .describe('Minimal time estimation in calendar days'),
-              maxDaysNeeded: z
-                .number()
-                .describe('Maximal time estimation in calendar days'),
-              expertiseNeeded: z
-                .string()
-                .describe(
-                  'Expertise needed to complete this phase. Short comma-separated list',
-                ),
-              timelineStartDay: z
-                .number()
-                .describe(
-                  `The start day of the phase in relation to the project start date. Day 1 is the project start date. Consider that some phases can run in parallel and some phases can't start before the previous phase is finished`,
-                ),
-              timelineEndDay: z
-                .number()
-                .describe(
-                  'The end day of the phase in relation to the project start date. Day 1 is the project start date. Use average estimation between min and max estimations for this calculation',
-                ),
-            }),
-          )
-          .describe('A list of project phases with titles and descriptions'),
-      }),
-    );
-
-    return structuredModel.invoke([
-      new SystemMessage(
-        `You are an AI assistant that helps to build a project plan.
-You need to transform all provided data into structured project plan with clear phases.
-
-The plan should be broken down into clear phases, each with its own title and description.
-For each phase, provide a minimal and maximal time estimation in days, as well as a short comma-separated list of expertise needed to complete the phase.
-Remember that the goal is to create a clear and actionable project plan that can be used for further planning and execution.
-`,
-      ),
-      new HumanMessage(`Project title: ${project.title}
-Project description: ${project.description || 'no description'}
-Project idea summary: ${project.summary || 'no summary provided'}
-`),
     ]);
   }
 

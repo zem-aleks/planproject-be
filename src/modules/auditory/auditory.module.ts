@@ -6,11 +6,16 @@ import { AuditoryAiService } from './services/auditory-ai.service';
 import { Auditory } from './entities/auditory.entity';
 import { UsersModule } from '../users/users.module';
 import { PlansModule } from '../plans/plans.module';
+import { ProjectAnalyzingStartedListener } from './listeners/project-analyzing-started.listener';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Auditory]), UsersModule, PlansModule],
   controllers: [AuditoryController],
-  providers: [AuditoryService, AuditoryAiService],
+  providers: [
+    AuditoryService,
+    AuditoryAiService,
+    ProjectAnalyzingStartedListener,
+  ],
   exports: [],
 })
 export class AuditoryModule {}

@@ -14,7 +14,6 @@ import { ShapingAiService } from '../services/shaping-ai.service';
 import { ProjectsService } from '../../plans/projects/services/projects.service';
 import { mapProjectToEntity } from '../../plans/projects/mappers/mapProjectToEntity';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
-import { PhasesService } from '../../plans/phases/services/phases.service';
 import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
 import { Project } from '../../plans/projects/entities/project.entity';
 import { notReachable } from '../../../shared/utils/notReachable';
@@ -30,9 +29,13 @@ export class ShapingPublicController {
     private readonly projectsService: ProjectsService,
     private readonly projectsAiService: ProjectsAiService,
     private readonly storageService: SupabaseStorageService,
-    private readonly phasesService: PhasesService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
+  }
+
+  @Get(':projectId/logo')
+  async getLogo(@Param('projectId', ProjectByIdPipe) project: Project) {
+    return mapProjectToEntity(project, this.logoPath);
   }
 
   @Patch(':projectId/logo')
@@ -43,6 +46,16 @@ export class ShapingPublicController {
     // if (project.userId !== user.id) {
     //   throw new UnauthorizedException('Permissions denied');
     // }
+
+    if (project.logoUrl && project.logoUrl !== 'loading') {
+      return mapProjectToEntity(project, this.logoPath);
+    }
+
+    if (project.logoUrl !== null) {
+      throw new BadRequestException(
+        'Project already has a logo or generation is in progress...',
+      );
+    }
 
     await this.projectsService.updatePartial(project.id, {
       logoUrl: 'loading',
@@ -160,69 +173,24 @@ export class ShapingPublicController {
     const existingProject =
       await this.projectsService.getOneByShapingId(shapingId);
 
-    if (existingProject) {
+    if (existingProject && existingProject.status !== 'draft') {
       return mapProjectToEntity(existingProject, this.logoPath);
     }
 
-    if (shaping.status !== 'started') {
-      throw new BadRequestException('Shaping is already in progress...');
-    }
+    const project =
+      existingProject ||
+      (await this.projectsService.createDraft({
+        shapingId: shaping.id,
+        userId: null,
+        clientId,
+      }));
 
-    const processingShaping = await this.shapingService.update({
-      ...shaping,
-      status: 'processing',
+    const updatedProject = await this.shapingService.startProjectShaping({
+      project,
+      shaping,
     });
 
-    const projectSummary =
-      await this.shapingAiService.summarizeProjectDescription(
-        processingShaping,
-      );
-
-    const project = await this.projectsService.create({
-      title: projectSummary.projectTitle,
-      description: projectSummary.projectDescription,
-      summary: projectSummary.projectSummary,
-      clientId: shaping.clientId,
-      shapingId: shaping.id,
-      status: 'shaping',
-      userId: null,
-      logoUrl: null,
-      daysNeeded: null,
-      completedAt: null,
-    });
-
-    await this.shapingService.updatePartial(shaping.id, {
-      projectId: project.id,
-      status: 'finished',
-    });
-
-    const { projectPhases } =
-      await this.shapingAiService.summarizeProjectPhases(project);
-
-    const phases = await this.phasesService.createMany(
-      projectPhases.map((phase) => ({
-        projectId: project.id,
-        title: phase.phaseTitle,
-        description: phase.phaseDescription,
-        minDaysNeeded: phase.minDaysNeeded,
-        maxDaysNeeded: phase.maxDaysNeeded,
-        expertiseNeeded: phase.expertiseNeeded,
-        timelineStartDay: phase.timelineStartDay,
-        timelineEndDay: phase.timelineEndDay,
-        status: 'building',
-        startedAt: new Date(),
-        completedAt: null,
-      })),
-    );
-
-    const endOfTimeline = Math.max(...phases.map((p) => p.timelineEndDay), 0);
-    const newProject = await this.projectsService.update({
-      ...project,
-      daysNeeded: endOfTimeline,
-      status: 'analyzing',
-    });
-
-    return mapProjectToEntity(newProject, this.logoPath);
+    return mapProjectToEntity(updatedProject, this.logoPath);
   }
 
   @Post(':shapingId')

@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Auditory } from '../entities/auditory.entity';
+import { Project } from '../../plans/projects/entities/project.entity';
+import { AuditoryAiService } from './auditory-ai.service';
 
 @Injectable()
 export class AuditoryService {
   constructor(
     @InjectRepository(Auditory)
     private readonly repository: Repository<Auditory>,
+    private readonly auditoryAiService: AuditoryAiService,
   ) {}
 
   async find(projectId: string) {
@@ -33,7 +36,26 @@ export class AuditoryService {
     });
   }
 
+  // TODO: should be simple save in repo
   async update(id: string, auditory: Partial<Auditory>) {
     return this.repository.update(id, auditory);
+  }
+
+  async updatePartial(id: string, auditory: Partial<Auditory>) {
+    return this.repository.update(id, auditory);
+  }
+
+  async generateForProject(project: Project) {
+    const auditory = await this.getOrCreate(project.id);
+    const auditoryInfo = await this.auditoryAiService.generateAuditoryInfo({
+      project,
+    });
+    await this.updatePartial(auditory.id, auditoryInfo);
+
+    const auditoryDetails =
+      await this.auditoryAiService.generateAuditoryDetails({
+        project,
+      });
+    await this.updatePartial(auditory.id, auditoryDetails);
   }
 }
