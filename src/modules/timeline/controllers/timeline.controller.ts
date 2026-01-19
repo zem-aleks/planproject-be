@@ -15,16 +15,21 @@ import { Project } from '../../plans/projects/entities/project.entity';
 import { TimelineService } from '../services/timeline.service';
 import { mapTimelinePointToEntity } from '../mappers/mapTimelinePointToEntity';
 import { MilestonesService } from '../../plans/milestones/services/milestones.service';
-import { mapMilestoneToEntityWithDetails } from '../../plans/milestones/mappers/mapMilestoneToEntity';
 import { PlansService } from '../../plans/services/plans.service';
-import { notReachable } from '../../../shared/utils/notReachable';
 import { getProjectDay } from '../../plans/projects/helpers/getProjectDay';
+import { TimelineEventsService } from '../services/timeline-events.service';
+import { notReachable } from '../../../shared/utils/notReachable';
+import { isTimelineEventMilestone } from '../types/entity';
+import { mapMilestoneToEntity } from '../../plans/milestones/mappers/mapMilestoneToEntity';
+import { TimelineAiService } from '../services/timeline-ai.service';
 
 @Controller('timeline')
 @UseGuards(JwtAuthGuard)
 export class TimelineController {
   constructor(
     private readonly timelineService: TimelineService,
+    private readonly timelineAiService: TimelineAiService,
+    private readonly timelineEventsService: TimelineEventsService,
     private readonly plansService: PlansService,
     private readonly milestonesService: MilestonesService,
   ) {}
@@ -44,22 +49,17 @@ export class TimelineController {
       });
     }
 
-    const projectDay = getProjectDay(project);
-    const timelinePoint = await this.timelineService.getTimelinePoint({
-      projectId: project.id,
-      projectDay,
-    });
+    const activeMilestone = await this.milestonesService.getActiveMilestone(
+      project.id,
+    );
 
-    if (!timelinePoint) {
+    if (activeMilestone) {
       throw new BadRequestException({
-        message: 'No existing timeline point found for this project day.',
-        code: 'NO_ACTIVE_TASKS',
+        message: 'There is already an active milestone for this project.',
+        code: 'MILESTONE_ACTIVE',
       });
     }
 
-    const milestones = await this.milestonesService.getByIds(
-      timelinePoint.milestoneIds,
-    );
     const status = await this.plansService.activateNextMilestone(project);
     switch (status.type) {
       case 'noMilestonesToStart':
@@ -69,16 +69,47 @@ export class TimelineController {
         });
 
       case 'success':
-        return this.timelineService.updateTimelinePoint({
-          project,
-          timelinePoint,
-          newMilestone: status.milestone,
-          finishedMilestones: milestones,
+        const activeMilestone =
+          await this.milestonesService.getOneByIdWithPhase(status.milestone.id);
+
+        return mapMilestoneToEntity({
+          ...status.milestone,
+          ...activeMilestone,
         });
 
       default:
         return notReachable(status);
     }
+  }
+  @Get(':projectId/comment')
+  async getFocusComment(
+    @Param('projectId', ProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (project.status !== 'active') {
+      throw new BadRequestException({
+        message: 'Project is not active',
+        code: 'PROJECT_NOT_ACTIVE',
+      });
+    }
+
+    const projectDay = getProjectDay(project);
+    const timelinePoint = await this.timelineService.getTimelinePointOrCreate({
+      projectId: project.id,
+      projectDay,
+    });
+
+    return this.timelineAiService.generateTimelinePointContent({
+      project,
+      timelinePoint,
+      events: await this.timelineEventsService.hydrateEvents(
+        timelinePoint.events,
+      ),
+    });
   }
 
   @Get(':projectId/today')
@@ -105,60 +136,68 @@ export class TimelineController {
     // }
 
     const projectDay = getProjectDay(project);
-    const timelinePoint = await this.timelineService.getTimelinePoint({
+    const timelinePoint = await this.timelineService.getTimelinePointOrCreate({
       projectId: project.id,
       projectDay,
     });
+    const todayMilestoneEvents = timelinePoint.events.filter(
+      isTimelineEventMilestone,
+    );
 
-    if (timelinePoint) {
-      const timelineMilestones = await this.milestonesService.getByIds(
-        timelinePoint.milestoneIds,
-      );
-      return mapTimelinePointToEntity(
-        timelinePoint,
-        timelineMilestones.map(mapMilestoneToEntityWithDetails),
-      );
-    }
-
-    const activeMilestones = await this.milestonesService.getActiveMilestones(
+    const activeMilestone = await this.milestonesService.getActiveMilestone(
       project.id,
     );
 
-    if (activeMilestones.length <= 0) {
-      const status = await this.plansService.activateNextMilestone(project);
-      switch (status.type) {
-        case 'noMilestonesToStart':
-          throw new BadRequestException({
-            message: 'Project is already completed',
-            code: 'PROJECT_COMPLETED',
-          });
+    console.log(activeMilestone, todayMilestoneEvents.length);
 
-        case 'success':
-          activeMilestones.push({ ...status.milestone, phase: status.phase });
-          break;
+    if (activeMilestone) {
+      const todayContainActiveMilestone =
+        todayMilestoneEvents.filter((e) => e.milestoneId === activeMilestone.id)
+          .length > 0;
 
-        default:
-          return notReachable(status);
+      if (!todayContainActiveMilestone) {
+        await this.timelineEventsService.registerEvents({
+          projectDay,
+          projectId: project.id,
+          events: [
+            {
+              type: 'milestone.continue',
+              milestoneId: activeMilestone.id,
+              comment: '',
+              createdAt: new Date(),
+            },
+          ],
+        });
       }
+
+      return mapMilestoneToEntity(activeMilestone);
     }
 
-    const newTimelinePoint = await this.timelineService.generateTimelinePoint({
-      project,
-      projectDay,
-      activeMilestones,
-    });
-
-    if (!newTimelinePoint) {
-      throw new BadRequestException({
-        message: 'No active tasks found for the project',
-        code: 'NO_ACTIVE_TASKS',
-      });
+    if (todayMilestoneEvents.length > 0) {
+      return null;
     }
 
-    return mapTimelinePointToEntity(
-      newTimelinePoint,
-      activeMilestones.map(mapMilestoneToEntityWithDetails),
-    );
+    const status = await this.plansService.activateNextMilestone(project);
+    switch (status.type) {
+      case 'noMilestonesToStart':
+        // throw new BadRequestException({
+        //   message: 'Project is already completed',
+        //   code: 'PROJECT_COMPLETED',
+        // });
+        return null;
+
+      case 'success':
+        const activeMilestone =
+          await this.milestonesService.getOneByIdWithPhase(status.milestone.id);
+
+        return mapMilestoneToEntity({
+          ...status.milestone,
+          ...activeMilestone,
+        });
+
+      default:
+        return notReachable(status);
+    }
   }
 
   @Get(':projectId/history')
@@ -174,21 +213,13 @@ export class TimelineController {
       project.id,
     );
 
-    const timelineMilestones = timelinePoints.flatMap((t) => t.milestoneIds);
-    const milestones =
-      await this.milestonesService.getByIds(timelineMilestones);
-
-    return timelinePoints.map((timelinePoint) => {
-      const pointMilestones = milestones
-        .filter((milestone) =>
-          timelinePoint.milestoneIds.includes(milestone.id),
-        )
-        .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
-
-      return mapTimelinePointToEntity(
-        timelinePoint,
-        pointMilestones.map(mapMilestoneToEntityWithDetails),
+    const promises = timelinePoints.map(async (timelinePoint) => {
+      const pointEvents = await this.timelineEventsService.hydrateEvents(
+        timelinePoint.events,
       );
+      return mapTimelinePointToEntity(timelinePoint, pointEvents);
     });
+
+    return Promise.all(promises);
   }
 }

@@ -1,13 +1,12 @@
 import { TimelinePoint } from '../entities/timeline-point.entity';
-import { TimelinePointEntity } from '../types/entity';
-import { MilestoneDetailsEntity } from '../../plans/milestones/types/entity';
+import { TimelineEventHydrated, TimelinePointEntity } from '../types/entity';
 
 export const mapTimelinePointToEntity = (
   item: TimelinePoint,
-  milestones: MilestoneDetailsEntity[],
+  events: TimelineEventHydrated[],
 ): TimelinePointEntity => {
   return {
     ...item,
-    milestones,
+    events,
   };
 };

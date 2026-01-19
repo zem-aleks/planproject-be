@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { TimelineEvent } from '../types/entity';
 
 @Entity()
 export class TimelinePoint {
@@ -18,14 +19,8 @@ export class TimelinePoint {
   @Column({ nullable: false, type: 'int' })
   projectDay: number;
 
-  @Column({ nullable: false, type: 'varchar' })
-  comment: string;
-
-  @Column({ nullable: false, type: 'simple-array' })
-  milestoneIds: string[];
-
-  @Column({ nullable: false, default: false })
-  completed: boolean;
+  @Column({ nullable: false, type: 'simple-json' })
+  events: TimelineEvent[];
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

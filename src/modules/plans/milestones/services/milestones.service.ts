@@ -2,16 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
 import { Milestone } from '../entities/milestone.entity';
-import { TimelineService } from '../../../timeline/services/timeline.service';
-import { getProjectDay } from '../../projects/helpers/getProjectDay';
-import { Project } from '../../projects/entities/project.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class MilestonesService {
   constructor(
     @InjectRepository(Milestone)
     private readonly repository: Repository<Milestone>,
-    private timelineService: TimelineService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -50,6 +48,13 @@ export class MilestonesService {
     return this.repository.findOne({ where: { id: milestoneId } });
   }
 
+  async getOneByIdWithPhase(milestoneId: string) {
+    return this.repository.findOne({
+      where: { id: milestoneId },
+      relations: ['phase'],
+    });
+  }
+
   async getByIds(milestoneIds: string[]) {
     return this.repository.find({
       where: { id: In(milestoneIds) },
@@ -60,6 +65,14 @@ export class MilestonesService {
 
   async getActiveMilestones(projectId: string) {
     return this.repository.find({
+      where: { projectId, status: 'inProgress' },
+      order: { orderIndex: 'ASC' },
+      relations: ['phase'],
+    });
+  }
+
+  async getActiveMilestone(projectId: string) {
+    return this.repository.findOne({
       where: { projectId, status: 'inProgress' },
       order: { orderIndex: 'ASC' },
       relations: ['phase'],
@@ -98,34 +111,49 @@ export class MilestonesService {
     milestone.completeMessage = message;
     milestone.completedAt = new Date();
 
-    await this.timelineService.registerMilestonesCompletion({
+    this.eventEmitter.emit('milestone.completed', {
       milestoneIds: [milestone.id],
-      projectId: milestone.id,
+      projectId: milestone.projectId,
       projectDay,
     });
 
     return this.update(milestone);
   }
 
-  async completeMilestones(milestoneIds: string[], project: Project) {
+  async completeMilestones({
+    milestoneIds,
+    projectDay,
+    projectId,
+  }: {
+    milestoneIds: string[];
+    projectDay: number;
+    projectId: string;
+  }) {
     const result = await this.repository.update(milestoneIds, {
       status: 'completed',
       completedAt: new Date(),
     });
 
-    await this.timelineService.registerMilestonesCompletion({
+    this.eventEmitter.emit('milestone.completed', {
       milestoneIds,
-      projectId: project.id,
-      projectDay: getProjectDay(project),
+      projectDay,
+      projectId,
     });
 
     return result;
   }
 
-  async activate(milestone: Milestone) {
+  async activate(milestone: Milestone, projectDay: number) {
     milestone.status = 'inProgress';
     milestone.startedAt = new Date();
-    return this.update(milestone);
+    const result = await this.update(milestone);
+    this.eventEmitter.emit('milestone.started', {
+      milestoneId: milestone.id,
+      projectId: milestone.projectId,
+      projectDay,
+    });
+
+    return result;
   }
 
   async areAllMilestonesCompleted(phaseId: string) {

@@ -10,6 +10,8 @@ import { MilestonesService } from '../../milestones/services/milestones.service'
 import { Project } from '../../projects/entities/project.entity';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { PhasesAiService } from './phases-ai.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { getProjectDay } from '../../projects/helpers/getProjectDay';
 
 @Injectable()
 export class PhasesService {
@@ -19,6 +21,7 @@ export class PhasesService {
     private readonly milestonesService: MilestonesService,
     private readonly projectsService: ProjectsService,
     private readonly phasesAiService: PhasesAiService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -86,16 +89,24 @@ export class PhasesService {
     return this.repository.softDelete(phaseId);
   }
 
-  async activate(phase: Phase) {
+  async activate(phase: Phase, projectDay: number) {
     if (phase.status !== 'notStarted') {
       throw new BadRequestException('Phase cannot be started');
     }
 
-    return this.update({
+    const result = await this.update({
       ...phase,
       status: 'inProgress',
       startedAt: new Date(),
     });
+
+    this.eventEmitter.emit('phase.started', {
+      phaseId: phase.id,
+      projectId: phase.projectId,
+      projectDay,
+    });
+
+    return result;
   }
 
   async areAllPhasesCompleted(projectId: string) {
@@ -113,21 +124,30 @@ export class PhasesService {
       .map((m) => m.id);
 
     if (notCompletedMilestones.length > 0) {
-      await this.milestonesService.completeMilestones(
-        notCompletedMilestones,
-        project,
-      );
+      await this.milestonesService.completeMilestones({
+        milestoneIds: notCompletedMilestones,
+        projectDay: getProjectDay(project),
+        projectId: project.id,
+      });
     }
 
-    const isProjectCompleted = await this.areAllPhasesCompleted(project.id);
-    if (isProjectCompleted) {
-      await this.projectsService.complete(project.id);
-    }
-
-    return this.updatePartial(phaseId, {
+    const result = await this.updatePartial(phaseId, {
       status: 'completed',
       completedAt: new Date(),
     });
+
+    this.eventEmitter.emit('phase.completed', {
+      phaseId,
+      projectId: project.id,
+      projectDay: getProjectDay(project),
+    });
+
+    const isProjectCompleted = await this.areAllPhasesCompleted(project.id);
+    if (isProjectCompleted) {
+      await this.projectsService.complete(project.id, getProjectDay(project));
+    }
+
+    return result;
   }
 
   async generateForProject(project: Project) {

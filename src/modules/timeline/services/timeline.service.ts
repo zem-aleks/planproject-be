@@ -2,17 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
 import { TimelinePoint } from '../entities/timeline-point.entity';
-import { Project } from '../../plans/projects/entities/project.entity';
-import { TimelineAiService } from './timeline-ai.service';
-import { Milestone } from '../../plans/milestones/entities/milestone.entity';
-import { getProjectDay } from '../../plans/projects/helpers/getProjectDay';
+import { TimelineEvent } from '../types/entity';
 
 @Injectable()
 export class TimelineService {
   constructor(
     @InjectRepository(TimelinePoint)
     private readonly repository: Repository<TimelinePoint>,
-    private readonly timelineAiService: TimelineAiService,
   ) {}
 
   async create(
@@ -25,10 +21,14 @@ export class TimelineService {
     return this.repository.save(data);
   }
 
+  async updatePartial(id: string, data: Partial<TimelinePoint>) {
+    return this.repository.update(id, data);
+  }
+
   async getProjectHistory(projectId: string) {
     return this.repository.find({
       where: { projectId },
-      order: { projectDay: 'DESC' },
+      order: { projectDay: 'ASC' },
     });
   }
 
@@ -55,86 +55,59 @@ export class TimelineService {
     });
   }
 
-  async updateTimelinePoint({
-    project,
-    timelinePoint,
-    newMilestone,
-    finishedMilestones,
-  }: {
-    project: Project;
-    timelinePoint: TimelinePoint;
-    newMilestone: Milestone;
-    finishedMilestones: Milestone[];
-  }) {
-    const projectDay = getProjectDay(project);
-    const comment =
-      await this.timelineAiService.generateUpdatedTimelinePointContent({
-        project,
-        newMilestone,
-        finishedMilestones,
-        projectDay,
-      });
+  // async updateTimelinePoint({
+  //   project,
+  //   timelinePoint,
+  //   newMilestone,
+  //   finishedMilestones,
+  // }: {
+  //   project: Project;
+  //   timelinePoint: TimelinePoint;
+  //   newMilestone: Milestone;
+  //   finishedMilestones: Milestone[];
+  // }) {
+  //   const projectDay = getProjectDay(project);
+  //   const comment =
+  //     await this.timelineAiService.generateUpdatedTimelinePointContent({
+  //       project,
+  //       newMilestone,
+  //       finishedMilestones,
+  //       projectDay,
+  //     });
+  //
+  //   return this.repository.save({
+  //     ...timelinePoint,
+  //     comment,
+  //     milestoneIds: [...timelinePoint.milestoneIds, newMilestone.id],
+  //     completed: false,
+  //   });
+  // }
 
-    return this.repository.save({
-      ...timelinePoint,
-      comment,
-      milestoneIds: [...timelinePoint.milestoneIds, newMilestone.id],
-      completed: false,
-    });
-  }
-
-  async generateTimelinePoint({
-    project,
-    projectDay,
-    activeMilestones,
-  }: {
-    project: Project;
-    projectDay: number;
-    activeMilestones: Milestone[];
-  }) {
-    const previousTimelinePoint = await this.getPreviousTimelinePoint({
-      projectId: project.id,
-      projectDay,
-    });
-    const comment = await this.timelineAiService.generateTimelinePointContent({
-      previousTimelinePoint,
-      project,
-      activeMilestones,
-      projectDay,
-    });
-
-    return this.create({
-      projectId: project.id,
-      projectDay,
-      comment,
-      milestoneIds: activeMilestones.map((m) => m.id),
-      completed: false,
-    });
-  }
-
-  async registerMilestonesCompletion({
+  async createTimelinePoint({
     projectId,
     projectDay,
-    milestoneIds,
+    events,
   }: {
     projectId: string;
     projectDay: number;
-    milestoneIds: string[];
+    events: TimelineEvent[];
   }) {
-    const point = await this.getTimelinePoint({ projectId, projectDay });
-    if (!point) {
-      return this.create({
-        projectId,
-        projectDay,
-        comment: '',
-        milestoneIds,
-        completed: false,
-      });
+    return this.create({
+      projectId,
+      projectDay,
+      events,
+    });
+  }
+
+  async getTimelinePointOrCreate(data: {
+    projectId: string;
+    projectDay: number;
+  }) {
+    const existingPoint = await this.getTimelinePoint(data);
+    if (existingPoint) {
+      return existingPoint;
     }
 
-    return this.update({
-      ...point,
-      milestoneIds: [...point.milestoneIds, ...milestoneIds],
-    });
+    return this.createTimelinePoint({ ...data, events: [] });
   }
 }

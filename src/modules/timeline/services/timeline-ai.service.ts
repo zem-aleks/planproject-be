@@ -4,19 +4,18 @@ import { getModel } from '../../ai/models/models';
 import { SystemMessage } from '@langchain/core/messages';
 import { TimelinePoint } from '../entities/timeline-point.entity';
 import { Milestone } from '../../plans/milestones/entities/milestone.entity';
+import { TimelineEventHydrated } from '../types/entity';
 
 @Injectable()
 export class TimelineAiService {
   async generateTimelinePointContent({
     project,
-    projectDay,
-    activeMilestones,
-    previousTimelinePoint,
+    timelinePoint,
+    events,
   }: {
     project: Project;
-    projectDay: number;
-    activeMilestones: Milestone[];
-    previousTimelinePoint: TimelinePoint | null;
+    timelinePoint: TimelinePoint;
+    events: TimelineEventHydrated[];
   }): Promise<string> {
     const model = getModel('gpt-4o-mini', 0.5);
     const result = await model.invoke([
@@ -25,22 +24,13 @@ export class TimelineAiService {
 User is working on the project ${project.title}. 
 Description: ${project.description || 'no description'}
 Essential project context: ${project.summary || 'no context provided'}
-It's ${projectDay} day of the project out of ${project.daysNeeded} days.
+It's ${timelinePoint.projectDay} day of the project out of ${project.daysNeeded} days.
 
-User currently works on the following milestones:
-${JSON.stringify(activeMilestones, null, 2)}
-
-
-${
-  previousTimelinePoint
-    ? `The previous record of work: 
-Project Day ${previousTimelinePoint.projectDay}. 
-Comment: ${previousTimelinePoint.comment}. 
-Milestone IDs worked on: ${previousTimelinePoint.milestoneIds.join(', ')}`
-    : ''
-}
+Here's a list of events that happened this day:
+${JSON.stringify(events, null, 2)}
 
 Your goal is to provide a comment summarizing what the user should focus on today to make the most progress on the project.
+Especially focus on milestone that's not completed yet, because all attention is to it now. Use additional events data to provide better recommendations for the active milestone (inProgress).
 Provide a concise comment (max 500 characters) that motivates the user and gives clear guidance on what to do next. 
 Keep the tone positive, funny, encouraging and humble.
 `,

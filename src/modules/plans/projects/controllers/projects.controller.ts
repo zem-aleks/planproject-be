@@ -19,6 +19,7 @@ import { ProjectByIdPipe } from '../pipes/project-by-id.pipe';
 import { Project } from '../entities/project.entity';
 import { SupabaseStorageService } from '../../../supabase/supabase-storage.service';
 import { PlansService } from '../../services/plans.service';
+import { getProjectDay } from '../helpers/getProjectDay';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -42,11 +43,10 @@ export class ProjectsController {
       throw new UnauthorizedException('Permissions denied');
     }
 
-    const updatedProject = await this.projectsService.update({
-      ...project,
-      status: 'active',
-      startedAt: new Date(),
-    });
+    await this.projectsService.activate(project.id, getProjectDay(project));
+    const updatedProject = await this.projectsService.getOneByIdOrThrow(
+      project.id,
+    );
 
     await this.plansService.activateNextMilestone(updatedProject);
     return mapProjectToEntity(updatedProject, this.logoPath);

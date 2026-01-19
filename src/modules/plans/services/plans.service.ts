@@ -21,6 +21,7 @@ export class PlansService {
   async activateNextMilestone(
     project: Project,
   ): Promise<ActivateNextMilestoneStatus> {
+    const projectDay = getProjectDay(project);
     const phases = await this.phasesService.getAllWithMilestones(project.id);
     const activePhases = phases.filter((p) => p.status === 'inProgress');
     const notStartedMilestones = activePhases
@@ -33,6 +34,7 @@ export class PlansService {
     if (notStartedMilestones.length > 0) {
       const activatedMilestone = await this.milestonesService.activate(
         notStartedMilestones[0],
+        projectDay,
       );
       return {
         type: 'success',
@@ -53,12 +55,14 @@ export class PlansService {
 
     const activatedPhase = await this.phasesService.activate(
       notStartedPhases[0],
+      projectDay,
     );
     const sortedMilestones = notStartedPhases[0].milestones.sort(
       (a, b) => a.orderIndex - b.orderIndex,
     );
     const activatedMilestone = await this.milestonesService.activate(
       sortedMilestones[0],
+      projectDay,
     );
 
     return {

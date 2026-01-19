@@ -26,6 +26,7 @@ import { User } from '@supabase/supabase-js';
 import { PhaseAndProject, PhaseByIdPipe } from '../pipes/phase-by-id.pipe';
 import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import { PhasesAiService } from '../services/phases-ai.service';
+import { getProjectDay } from '../../projects/helpers/getProjectDay';
 
 @Controller('phases')
 @UseGuards(JwtAuthGuard)
@@ -73,7 +74,10 @@ export class PhasesController {
       throw new BadRequestException('Project is not started yet');
     }
 
-    const updatedPhase = await this.phasesService.activate(phase);
+    const updatedPhase = await this.phasesService.activate(
+      phase,
+      getProjectDay(project),
+    );
     return mapPhaseToEntity(updatedPhase);
   }
 

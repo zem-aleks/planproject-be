@@ -1,4 +1,4 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -20,7 +20,6 @@ import { TasksController } from './tasks/controllers/tasks.controller';
 import { TasksService } from './tasks/services/tasks.service';
 import { TasksAiService } from './tasks/services/tasks-ai.service';
 import { PlansService } from './services/plans.service';
-import { TimelineModule } from '../timeline/timeline.module';
 import { ProjectShapingStartedListener } from './listeners/project-shaping-started.listener';
 
 @Module({
@@ -28,7 +27,6 @@ import { ProjectShapingStartedListener } from './listeners/project-shaping-start
     TypeOrmModule.forFeature([Project, Phase, Milestone, Task]),
     UsersModule,
     SupabaseModule,
-    forwardRef(() => TimelineModule),
   ],
   controllers: [
     ProjectsController,

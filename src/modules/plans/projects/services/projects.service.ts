@@ -3,12 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
 import * as dayjs from 'dayjs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private readonly repository: Repository<Project>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -52,11 +54,26 @@ export class ProjectsService {
     return this.repository.softDelete(projectId);
   }
 
-  async complete(projectId: string) {
-    return this.updatePartial(projectId, {
+  async activate(projectId: string, projectDay: number) {
+    const result = await this.updatePartial(projectId, {
+      status: 'active',
+      startedAt: new Date(),
+    });
+
+    this.eventEmitter.emit('project.started', { projectId, projectDay });
+
+    return result;
+  }
+
+  async complete(projectId: string, projectDay: number) {
+    const result = await this.updatePartial(projectId, {
       status: 'completed',
       completedAt: new Date(),
     });
+
+    this.eventEmitter.emit('project.completed', { projectId, projectDay });
+
+    return result;
   }
 
   async createDraft({
