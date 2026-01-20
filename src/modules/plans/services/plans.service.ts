@@ -91,9 +91,10 @@ export class PlansService {
       0,
     );
 
-    const projectProgress = project.daysNeeded
-      ? Math.round((completedMilestonesDaysNeeded / project.daysNeeded) * 100)
-      : 0;
+    const projectProgress =
+      milestones.length > 0
+        ? Math.round((completedMilestones.length / milestones.length) * 100)
+        : 0;
 
     const diffWithPlanDays =
       completedMilestonesDaysNeeded + activeMilestonesDaysNeeded - projectDay;
