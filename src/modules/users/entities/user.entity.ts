@@ -6,6 +6,7 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { SUBSCRIPTION_TYPES, SubscriptionType } from '../types/entity';
 
 @Entity()
 export class User {
@@ -14,6 +15,14 @@ export class User {
 
   @Column({ nullable: false })
   email: string;
+
+  @Column({
+    nullable: false,
+    type: 'enum',
+    enum: SUBSCRIPTION_TYPES,
+    default: 'basic',
+  })
+  subscription: SubscriptionType;
 
   @Column({ nullable: true, type: 'varchar' })
   phone: string | null;

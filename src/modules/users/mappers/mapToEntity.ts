@@ -5,6 +5,7 @@ export const mapToEntity = (user: User): UserEntity => {
   return {
     id: user.id,
     email: user.email,
+    subscription: user.subscription,
     phone: user.phone,
     avatarUrl: user.avatarUrl,
     bio: user.bio,
