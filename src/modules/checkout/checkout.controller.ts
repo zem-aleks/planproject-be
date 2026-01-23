@@ -16,6 +16,7 @@ import { SubscriptionsService } from './subscriptions.service';
 import { User } from '../users/entities/user.entity';
 import { CustomRequest } from '../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../users/pipes/user.pipe';
+import { SubscriptionPeriod, SubscriptionType } from '../users/types/entity';
 
 @Controller('checkout')
 export class CheckoutController {
@@ -55,11 +56,17 @@ export class CheckoutController {
   @Post('create-session')
   @UseGuards(JwtAuthGuard)
   async createCheckoutSession(
-    @Body() { priceId }: { priceId: string },
+    @Body()
+    { type, period }: { type: SubscriptionType; period: SubscriptionPeriod },
     @CustomRequest(UserPipe)
     user: User,
   ) {
     const { stripe } = this.stripeService;
+    const priceId = this.subscriptionsService.getPriceId(type, period);
+    if (!priceId) {
+      throw new BadRequestException('Product does not exist');
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],

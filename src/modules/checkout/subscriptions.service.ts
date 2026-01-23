@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 export class SubscriptionsService {
   readonly prices: Record<
     Exclude<SubscriptionType, 'basic'>,
-    { monthly: string; yearly: string }
+    Record<SubscriptionPeriod, string>
   >;
 
   constructor(
@@ -154,5 +154,16 @@ export class SubscriptionsService {
       default:
         return { type: 'basic', period: 'monthly' };
     }
+  }
+
+  getPriceId(
+    type: SubscriptionType,
+    period: SubscriptionPeriod,
+  ): string | null {
+    if (type === 'basic') {
+      return null;
+    }
+
+    return this.prices[type][period];
   }
 }
