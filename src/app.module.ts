@@ -27,6 +27,7 @@ import { Competitor } from './modules/competitors/entities/competitor.entity';
 import { CompetitorsModule } from './modules/competitors/competitors.module';
 import { AuditoryModule } from './modules/auditory/auditory.module';
 import { Auditory } from './modules/auditory/entities/auditory.entity';
+import { CheckoutModule } from './modules/checkout/checkout.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { Auditory } from './modules/auditory/entities/auditory.entity';
     TimelineModule,
     CompetitorsModule,
     AuditoryModule,
+    CheckoutModule,
   ],
   controllers: [AppController],
   providers: [AppService],

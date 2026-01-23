@@ -20,25 +20,27 @@ export class UsersService {
     });
   }
 
+  findOneBySubscriptionId(subscriptionId: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { stripeSubscriptionId: subscriptionId },
+    });
+  }
+
+  findOneByStripeCustomerId(stripeCustomerId: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { stripeCustomerId },
+    });
+  }
+
   create(data: { email: string; id: string }) {
     return this.userRepository.save(data);
   }
 
-  // createAdmin(email: string) {
-  //   return this.userRepository.save({
-  //     email: email,
-  //     role: 'admin',
-  //   });
-  // }
-
-  // createByEmail({ email, newsletter }: { email: string; newsletter: boolean }) {
-  //   return this.userRepository.save({
-  //     email,
-  //     newsletter: newsletter,
-  //   });
-  // }
-
   update(data: Partial<User>) {
     return this.userRepository.save(data);
+  }
+
+  updatePartial(userId: string, data: Partial<User>) {
+    return this.userRepository.update(userId, data);
   }
 }

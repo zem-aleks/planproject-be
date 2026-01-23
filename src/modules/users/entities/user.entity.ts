@@ -6,7 +6,12 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { SUBSCRIPTION_TYPES, SubscriptionType } from '../types/entity';
+import {
+  SUBSCRIPTION_PERIODS,
+  SUBSCRIPTION_TYPES,
+  SubscriptionPeriod,
+  SubscriptionType,
+} from '../types/entity';
 
 @Entity()
 export class User {
@@ -16,6 +21,21 @@ export class User {
   @Column({ nullable: false })
   email: string;
 
+  @Column({ nullable: true, type: 'varchar' })
+  stripeCustomerId: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  stripeSubscriptionId: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  stripePriceId: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  subscriptionStatus: string | null;
+
+  @Column({ nullable: true, type: 'date' })
+  subscriptionPeriodEnd: Date | null;
+
   @Column({
     nullable: false,
     type: 'enum',
@@ -23,6 +43,14 @@ export class User {
     default: 'basic',
   })
   subscription: SubscriptionType;
+
+  @Column({
+    nullable: false,
+    type: 'enum',
+    enum: SUBSCRIPTION_PERIODS,
+    default: 'monthly',
+  })
+  subscriptionPeriod: SubscriptionPeriod;
 
   @Column({ nullable: true, type: 'varchar' })
   phone: string | null;
