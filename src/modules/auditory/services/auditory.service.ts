@@ -20,9 +20,7 @@ export class AuditoryService {
   }
 
   async getOrCreate(projectId: string) {
-    const auditory = await this.repository.findOne({
-      where: { projectId },
-    });
+    const auditory = await this.find(projectId);
 
     if (auditory) {
       return auditory;

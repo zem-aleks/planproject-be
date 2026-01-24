@@ -37,6 +37,10 @@ export class CompetitorsController {
       return competitors.slice(0, 1).map(mapCompetitorToEntity);
     }
 
+    if (user.subscription === 'pro') {
+      return competitors.slice(0, 5).map(mapCompetitorToEntity);
+    }
+
     return competitors.map(mapCompetitorToEntity);
 
     // const createdCompetitors =

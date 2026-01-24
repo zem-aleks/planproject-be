@@ -28,3 +28,31 @@ export type AuditoryEntity = {
   differentiation: string | null;
   auditoryChannels: string | null;
 };
+
+export type AuditoryBasicData = {
+  id: string;
+  projectId: string;
+  ageSeparation: Array<AuditoryAgeSegment>;
+  menPercentage: number | null;
+  tam: string | null;
+  sam: string | null;
+  som: string | null;
+};
+
+export type AuditoryProData = {
+  mainSegments: Array<AuditorySegment>;
+  auditoryDemands: string | null;
+  auditoryPains: string | null;
+};
+
+export type AuditoryBusinessData = {
+  characters: Array<AuditoryCharacter>;
+  differentiation: string | null;
+  auditoryChannels: string | null;
+};
+
+export type AuditoryData = {
+  basic: AuditoryBasicData;
+  pro: AuditoryProData | null;
+  business: AuditoryBusinessData | null;
+};
