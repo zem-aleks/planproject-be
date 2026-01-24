@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, PipeTransform } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  PipeTransform,
+} from '@nestjs/common';
 
 import { PhasesService } from '../services/phases.service';
 import { ProjectsService } from '../../projects/services/projects.service';
@@ -26,6 +31,10 @@ export class PhaseByIdPipe implements PipeTransform {
     );
     if (!project) {
       throw new NotFoundException('Project not found');
+    }
+
+    if (!project.activated) {
+      throw new BadRequestException('Project is locked');
     }
 
     return { project, phase };

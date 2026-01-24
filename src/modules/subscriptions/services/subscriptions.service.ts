@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import Stripe from 'stripe';
 import { StripeService } from './stripe.service';
-import { UsersService } from '../users/users.service';
-import { User } from '../users/entities/user.entity';
-import { SubscriptionPeriod, SubscriptionType } from '../users/types/entity';
+import { UsersService } from '../../users/users.service';
+import { User } from '../../users/entities/user.entity';
+import { SubscriptionPeriod, SubscriptionType } from '../../users/types/entity';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()

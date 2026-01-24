@@ -10,11 +10,11 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
-import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
 import { Project } from '../../plans/projects/entities/project.entity';
 import { AuditoryService } from '../services/auditory.service';
 import { AuditoryAiService } from '../services/auditory-ai.service';
 import { mapAuditoryToEntity } from '../mappers/mapAuditoryToEntity';
+import { ActiveProjectByIdPipe } from '../../plans/projects/pipes/active-project-by-id.pipe';
 
 @Controller('auditory')
 @UseGuards(JwtAuthGuard)
@@ -26,7 +26,7 @@ export class AuditoryController {
 
   @Get(':projectId')
   async getAuditory(
-    @Param('projectId', ProjectByIdPipe) project: Project,
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
     @AuthUser() user: User,
   ) {
     if (project.userId !== user.id) {
@@ -38,7 +38,7 @@ export class AuditoryController {
 
   @Patch(':projectId')
   async createAuditoryInfo(
-    @Param('projectId', ProjectByIdPipe) project: Project,
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
     @AuthUser() user: User,
   ) {
     if (project.userId !== user.id) {
@@ -67,7 +67,7 @@ export class AuditoryController {
 
   @Patch(':projectId/details')
   async createAuditoryDetails(
-    @Param('projectId', ProjectByIdPipe) project: Project,
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
     @AuthUser() user: User,
   ) {
     if (project.userId !== user.id) {

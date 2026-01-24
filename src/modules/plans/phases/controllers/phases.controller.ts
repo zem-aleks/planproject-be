@@ -6,7 +6,6 @@ import {
   Get,
   NotFoundException,
   Param,
-  ParseUUIDPipe,
   Patch,
   Put,
   UnauthorizedException,
@@ -18,7 +17,6 @@ import {
   mapPhaseToEntityWithMilestones,
 } from '../mappers/mapPhaseToEntity';
 import { PhasesService } from '../services/phases.service';
-import { ProjectByIdPipe } from '../../projects/pipes/project-by-id.pipe';
 import { Project } from '../../projects/entities/project.entity';
 import { CustomRequest } from '../../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../../users/pipes/user.pipe';
@@ -27,6 +25,7 @@ import { PhaseAndProject, PhaseByIdPipe } from '../pipes/phase-by-id.pipe';
 import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import { PhasesAiService } from '../services/phases-ai.service';
 import { getProjectDay } from '../../projects/helpers/getProjectDay';
+import { ActiveProjectByIdPipe } from '../../projects/pipes/active-project-by-id.pipe';
 
 @Controller('phases')
 @UseGuards(JwtAuthGuard)
@@ -38,7 +37,7 @@ export class PhasesController {
 
   @Get(':projectId')
   async getPhases(
-    @Param('projectId', ProjectByIdPipe) project: Project,
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
     @CustomRequest(UserPipe) user: User,
   ) {
     if (project.userId !== user.id) {
@@ -105,14 +104,20 @@ export class PhasesController {
   }
 
   @Delete(':phaseId')
-  async deletePhase(@Param('phaseId', ParseUUIDPipe) phaseId: string) {
-    // TODO: vverify user
-    return this.phasesService.softDelete(phaseId);
+  async deletePhase(
+    @Param('phaseId', PhaseByIdPipe)
+    { phase, project }: PhaseAndProject,
+    @CustomRequest(UserPipe) user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    return this.phasesService.softDelete(phase.id);
   }
 
   @Put(':projectId')
   async modifyPhases(
-    @Param('projectId', ProjectByIdPipe) project: Project,
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
     @Body('message') message: string,
     @AuthUser() user: User,
   ) {
@@ -135,8 +140,6 @@ export class PhasesController {
       phases: existingPhases,
       modificationMessage: message,
     });
-
-    console.log(projectPhases);
 
     const promises = existingPhases.map((phase) => {
       const toBeRemoved = !projectPhases.find((p) => p.id === phase.id);

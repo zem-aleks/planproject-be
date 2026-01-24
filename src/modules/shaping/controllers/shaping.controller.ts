@@ -15,7 +15,6 @@ import {
 import { ShapingService } from '../services/shaping.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
-import { User } from '@supabase/supabase-js';
 import { ShapingAiService } from '../services/shaping-ai.service';
 import { ProjectsService } from '../../plans/projects/services/projects.service';
 import { SupabaseStorageService } from '../../supabase/supabase-storage.service';
@@ -25,6 +24,8 @@ import { Project } from '../../plans/projects/entities/project.entity';
 import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../users/pipes/user.pipe';
 import { mapShapingToEntity } from '../mappers/mapShapingToEntity';
+import { MembershipService } from '../../subscriptions/services/membership.service';
+import { User } from '../../users/entities/user.entity';
 
 @Controller('shaping')
 @UseGuards(JwtAuthGuard)
@@ -36,6 +37,7 @@ export class ShapingController {
     private readonly shapingAiService: ShapingAiService,
     private readonly projectsService: ProjectsService,
     private readonly storageService: SupabaseStorageService,
+    private readonly membershipService: MembershipService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
@@ -44,7 +46,7 @@ export class ShapingController {
   async bindShaping(
     @Body('clientId', ParseUUIDPipe) clientId: string,
     @Param('shapingId', ParseUUIDPipe) shapingId: string,
-    @AuthUser() user: User,
+    @CustomRequest(UserPipe) user: User,
   ) {
     const shape = await this.shapingService.getByIdAndClientId(
       shapingId,
@@ -177,6 +179,7 @@ export class ShapingController {
     const connectedProject = await this.projectsService.update({
       ...project,
       userId: user.id,
+      activated: await this.membershipService.canActivateNewProject(user),
     });
 
     const shaping = await this.shapingService.getOneById(

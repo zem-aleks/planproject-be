@@ -8,15 +8,15 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { StripeService } from './stripe.service';
+import { StripeService } from '../subscriptions/services/stripe.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
-import { SubscriptionsService } from './subscriptions.service';
 import { User } from '../users/entities/user.entity';
 import { CustomRequest } from '../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../users/pipes/user.pipe';
 import { SubscriptionPeriod, SubscriptionType } from '../users/types/entity';
+import { SubscriptionsService } from '../subscriptions/services/subscriptions.service';
 
 @Controller('checkout')
 export class CheckoutController {

@@ -40,6 +40,9 @@ export class Project {
   @Column({ nullable: false, type: 'varchar', default: 'shaping' })
   status: ProjectStatus;
 
+  @Column({ nullable: false, type: 'boolean', default: false })
+  activated: boolean;
+
   @Column({
     name: 'startedAt',
     type: 'timestamp',

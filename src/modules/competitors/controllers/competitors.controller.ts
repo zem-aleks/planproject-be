@@ -8,10 +8,10 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
 import { User } from '@supabase/supabase-js';
-import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
 import { Project } from '../../plans/projects/entities/project.entity';
 import { CompetitorsService } from '../services/competitors.service';
 import { mapCompetitorToEntity } from '../mappers/mapCompetitorToEntity';
+import { ActiveProjectByIdPipe } from '../../plans/projects/pipes/active-project-by-id.pipe';
 
 @Controller('competitors')
 @UseGuards(JwtAuthGuard)
@@ -20,7 +20,7 @@ export class CompetitorsController {
 
   @Get(':projectId')
   async getCompetitors(
-    @Param('projectId', ProjectByIdPipe) project: Project,
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
     @AuthUser() user: User,
   ) {
     if (project.userId !== user.id) {

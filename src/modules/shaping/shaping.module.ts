@@ -8,6 +8,7 @@ import { ShapingPublicController } from './controllers/shaping-public.controller
 import { SupabaseModule } from '../supabase/supabase.module';
 import { UsersModule } from '../users/users.module';
 import { PlansModule } from '../plans/plans.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PlansModule } from '../plans/plans.module';
     SupabaseModule,
     UsersModule,
     PlansModule,
+    SubscriptionsModule,
   ],
   controllers: [ShapingController, ShapingPublicController],
   providers: [ShapingService, ShapingAiService],

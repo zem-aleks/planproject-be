@@ -97,6 +97,11 @@ export class ProjectsService {
       logoUrl: null,
       daysNeeded: null,
       completedAt: null,
+      activated: false,
     });
+  }
+
+  async activatedProjectsCount(userId: string) {
+    return this.repository.count({ where: { userId, activated: true } });
   }
 }
