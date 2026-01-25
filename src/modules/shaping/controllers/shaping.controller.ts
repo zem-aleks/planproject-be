@@ -79,7 +79,16 @@ export class ShapingController {
     if (!project) {
       throw new NotFoundException('Project not found.');
     }
-    await this.projectsService.updatePartial(project.id, { userId: user.id });
+
+    let activated = project.activated;
+    if (!activated && project.status === 'shaping') {
+      activated = await this.membershipService.canActivateNewProject(user);
+    }
+
+    await this.projectsService.updatePartial(project.id, {
+      userId: user.id,
+      activated,
+    });
     return mapProjectToEntity(project, this.logoPath);
   }
 

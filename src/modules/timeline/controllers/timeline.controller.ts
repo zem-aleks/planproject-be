@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
 import { AuthUser } from '../../../shared/decorators/auth.decorator';
-import { User } from '@supabase/supabase-js';
 import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
 import { Project } from '../../plans/projects/entities/project.entity';
 import { TimelineService } from '../services/timeline.service';
@@ -22,6 +21,9 @@ import { notReachable } from '../../../shared/utils/notReachable';
 import { isTimelineEventMilestone } from '../types/entity';
 import { mapMilestoneToEntity } from '../../plans/milestones/mappers/mapMilestoneToEntity';
 import { TimelineAiService } from '../services/timeline-ai.service';
+import { CustomRequest } from '../../../shared/decorators/custom-request.decorator';
+import { UserPipe } from '../../users/pipes/user.pipe';
+import { User } from '../../users/entities/user.entity';
 
 @Controller('timeline')
 @UseGuards(JwtAuthGuard)
@@ -84,9 +86,13 @@ export class TimelineController {
   @Get(':projectId/comment')
   async getFocusComment(
     @Param('projectId', ProjectByIdPipe) project: Project,
-    @AuthUser() user: User,
+    @CustomRequest(UserPipe) user: User,
   ) {
     if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (user.subscription !== 'business') {
       throw new UnauthorizedException('Permissions denied');
     }
 
