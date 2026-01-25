@@ -81,7 +81,10 @@ export class ShapingController {
     }
 
     let activated = project.activated;
-    if (!activated && project.status === 'shaping') {
+    const canBeActivated =
+      project.status === 'shaping' || project.status === 'analyzing';
+
+    if (!activated && canBeActivated) {
       activated = await this.membershipService.canActivateNewProject(user);
     }
 

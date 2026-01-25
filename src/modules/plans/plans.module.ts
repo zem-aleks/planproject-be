@@ -22,6 +22,7 @@ import { TasksAiService } from './tasks/services/tasks-ai.service';
 import { PlansService } from './services/plans.service';
 import { ProjectShapingStartedListener } from './listeners/project-shaping-started.listener';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { PhasesCreatedListener } from './listeners/phases-created.listener';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     TasksAiService,
     PlansService,
     ProjectShapingStartedListener,
+    PhasesCreatedListener,
   ],
   exports: [
     ProjectsService,

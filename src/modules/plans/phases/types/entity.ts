@@ -26,4 +26,5 @@ export type PhaseStatus =
   | 'building'
   | 'notStarted'
   | 'inProgress'
-  | 'completed';
+  | 'completed'
+  | 'error';

@@ -95,6 +95,95 @@ Make sure that the total daysNeeded for all milestones is at least ${phase.minDa
     ]);
   }
 
+  async generateProjectMilestones({
+    phases,
+    project,
+  }: {
+    phases: Phase[];
+    project: Project;
+  }) {
+    const model = getModel('gpt-4.1-mini', 0.5);
+    const structuredModel = model.withStructuredOutput(
+      z.object({
+        milestones: z
+          .array(
+            z.object({
+              title: z.string().describe('Milestone title'),
+              phaseId: z
+                .string()
+                .describe('Phase id to what this milestone belongs'),
+              description: z.string().describe('Milestone description'),
+              daysNeeded: z
+                .number()
+                .describe(
+                  'How many days are needed to complete this milestone',
+                ),
+              definitionOfDone: z
+                .string()
+                .describe(
+                  'Definition of done for this milestone. When this milestone can be considered as done',
+                ),
+              usefulResources: z
+                .string()
+                .nullable()
+                .describe(
+                  'Useful resources for this milestone. Links, articles, books, examples of similar projects etc. References that can help to complete the milestone. Markdown formatted',
+                ),
+              steps: z
+                .string()
+                .nullable()
+                .describe(
+                  'List of simple steps how the milestone can be accomplished. Markdown formatted',
+                ),
+              orderIndex: z
+                .number()
+                .describe('The order index of the milestone'),
+            }),
+          )
+          .describe('A list of project phase milestones'),
+      }),
+    );
+
+    return structuredModel.invoke([
+      new SystemMessage(
+        `You are an AI assistant that helps to build a project plan.
+User is working on the project ${project.title}. 
+Description: ${project.description || 'no description'}
+Essential project context: ${project.summary || 'no context provided'}
+
+Here's a list of all project phases in JSON format:
+${JSON.stringify(phases, null, 2)}
+
+Your goal is to generate a list of milestones for these phases.
+A milestone is a significant point or event in a project. 
+Milestones help to break down the project into manageable parts and track the progress.
+
+For each milestone, provide:
+- title: A concise title for the milestone
+- phaseId: id of phase to wha this milestone belongs
+- description: A brief description of the milestone
+- daysNeeded: An estimation of how many days are needed to complete this milestone
+- definitionOfDone: A clear definition of done for this milestone. When can this milestone be considered as done
+- orderIndex: The order index of the milestone within the phase
+- usefulResources: Links, articles, books, examples of similar projects etc. References that can help to complete the milestone.
+- steps: List of simple steps how the milestone can be accomplished.
+
+Make sure that the total daysNeeded for all milestones in a phase does not exceed maxDaysNeeded days for the specified phase.
+Make sure that the total daysNeeded for all milestones in a phase is at least minDaysNeeded days for the specified phase.
+
+Milestones should represent step-by-step guidance how to accomplish the project. It must be easy to understand and have a good description.
+Try to have a manageable amount of milestones. Usually it's nice to have 3-6 milestones per phase. 
+Avoid milestones that take 10 and more days. Make a few smaller instead of them.
+Ideal case if a milestone takes 1-3 days. 
+
+Avoid many steps with documentation. You can mention it, but the project is most likely personal 
+idea and it makes sense to focus on the things that really make a good progress towards implementation. Only if a team works on it,
+add needed steps to organize it.
+`,
+      ),
+    ]);
+  }
+
   async modifyPhaseMilestones({
     phase,
     milestones,

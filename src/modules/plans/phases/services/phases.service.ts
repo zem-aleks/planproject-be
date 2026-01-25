@@ -44,6 +44,10 @@ export class PhasesService {
     return this.repository.update(phaseId, data);
   }
 
+  async updateByProjectPartial(projectId: string, data: Partial<Phase>) {
+    return this.repository.update({ projectId }, data);
+  }
+
   async getAll(projectId: string) {
     return this.repository.find({
       where: { projectId },
@@ -153,7 +157,8 @@ export class PhasesService {
   async generateForProject(project: Project) {
     const { projectPhases } =
       await this.phasesAiService.summarizeProjectPhases(project);
-    return this.createMany(
+
+    const phases = await this.createMany(
       projectPhases.map((phase) => ({
         projectId: project.id,
         title: phase.phaseTitle,
@@ -168,5 +173,12 @@ export class PhasesService {
         completedAt: null,
       })),
     );
+
+    this.eventEmitter.emit('phase.createdForProject', {
+      phases,
+      project,
+    });
+
+    return phases;
   }
 }

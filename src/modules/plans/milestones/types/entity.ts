@@ -4,7 +4,6 @@ export type MilestoneEntity = {
   id: string;
   phaseId: string;
   projectId: string;
-  userId: string;
   title: string;
   description: string;
   definitionOfDone: string;

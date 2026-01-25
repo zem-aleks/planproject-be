@@ -91,6 +91,10 @@ export class MilestonesService {
     return this.repository.softDelete(milestoneId);
   }
 
+  async deleteForProject(projectId: string) {
+    return this.repository.delete({ projectId });
+  }
+
   // async getActiveByProjectId(projectId: string) {
   //   return this.repository.find({
   //     where: { projectId, status: 'inProgress' },
