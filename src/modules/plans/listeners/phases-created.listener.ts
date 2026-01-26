@@ -55,4 +55,53 @@ export class PhasesCreatedListener {
       });
     }
   }
+
+  @OnEvent('phase.updatedForProject')
+  async updateMilestonesForPhases({
+    project,
+    phases,
+  }: {
+    project: Project;
+    phases: Phase[];
+  }) {
+    if (phases.length < 1) {
+      return;
+    }
+
+    const buildingPhases = phases.filter((p) => p.status === 'building');
+    if (buildingPhases.length === 0) {
+      return;
+    }
+
+    try {
+      const { milestones } =
+        await this.milestonesAiService.generateProjectAdditionalMilestones({
+          project,
+          phases,
+        });
+
+      await this.milestonesService.createMany(
+        milestones.map((milestone) => ({
+          ...milestone,
+          projectId: project.id,
+          userId: project.userId as string,
+          status: 'notStarted',
+          startedAt: new Date(),
+          completeMessage: null,
+          completedAt: null,
+        })),
+      );
+      await this.phasesService.updateManyPartial(
+        buildingPhases.map((p) => p.id),
+        {
+          status: 'notStarted',
+        },
+      );
+    } catch (e) {
+      console.error(e);
+      await this.phasesService.updateByProjectPartial(project.id, {
+        status: 'error',
+      });
+    }
+  }
 }

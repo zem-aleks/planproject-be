@@ -91,6 +91,14 @@ export class MilestonesService {
     return this.repository.softDelete(milestoneId);
   }
 
+  async softDeleteMany(milestoneIds: string[]) {
+    return this.repository.softDelete(milestoneIds);
+  }
+
+  async softDeleteByPhases(phaseIds: string[]) {
+    return this.repository.softDelete({ phaseId: In(phaseIds) });
+  }
+
   async deleteForProject(projectId: string) {
     return this.repository.delete({ projectId });
   }

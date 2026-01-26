@@ -18,7 +18,6 @@ import { MilestonesService } from '../services/milestones.service';
 import { PhasesService } from '../../phases/services/phases.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { AuthUser } from '../../../../shared/decorators/auth.decorator';
-import { User } from '@supabase/supabase-js';
 import { MilestonesAiService } from '../services/milestones-ai.service';
 import {
   mapPhaseToEntity,
@@ -34,6 +33,7 @@ import { CustomRequest } from '../../../../shared/decorators/custom-request.deco
 import { UserPipe } from '../../../users/pipes/user.pipe';
 import { MilestoneDetailsEntity } from '../types/entity';
 import { getProjectDay } from '../../projects/helpers/getProjectDay';
+import { User } from '../../../users/entities/user.entity';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -132,22 +132,37 @@ export class MilestonesController {
   async modifyMilestones(
     @Param('phaseId', ParseUUIDPipe) phaseId: string,
     @Body('message') message: string,
-    @AuthUser() user: User,
+    @CustomRequest(UserPipe) user: User,
   ) {
     if (!message || message.trim().length === 0) {
       throw new BadRequestException('Message is required');
     }
 
-    const phase = await this.phasesService.getOneByIdOrThrow(phaseId);
-    if (phase.status !== 'notStarted') {
-      throw new BadRequestException('Phase already started or completed');
+    if (message.trim().length > 2000) {
+      throw new BadRequestException('Message is too long');
     }
 
+    if (user.subscription === 'basic') {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const phase = await this.phasesService.getOneByIdOrThrow(phaseId);
+    // if (phase.status !== 'notStarted') {
+    //   throw new BadRequestException('Phase already started or completed');
+    // }
     const project = await this.projectsService.getOneByIdOrThrow(
       phase.projectId,
     );
+
     if (project.userId !== user.id) {
       throw new UnauthorizedException('Permissions denied');
+    }
+
+    const isActiveProject =
+      project.status === 'analyzing' || project.status === 'active';
+
+    if (!isActiveProject) {
+      throw new BadRequestException('Project is not active');
     }
 
     const existingMilestones = await this.milestonesService.getAll(phase.id);
@@ -164,10 +179,11 @@ export class MilestonesController {
       return !updatedMilestones.find((m) => m.id === milestone.id);
     });
 
-    const deletePromises = milestonesToDelete.map((milestone) =>
-      this.milestonesService.softDelete(milestone.id),
-    );
-    await Promise.all(deletePromises);
+    if (milestonesToDelete.length > 0) {
+      await this.milestonesService.softDeleteMany(
+        milestonesToDelete.map((milestone) => milestone.id),
+      );
+    }
 
     const phaseMilestones = await this.milestonesService.createMany(
       updatedMilestones.map((milestone) => {
@@ -179,10 +195,6 @@ export class MilestonesController {
             phaseId: phase.id,
             projectId: project.id,
             userId: user.id,
-            status: 'notStarted',
-            startedAt: new Date(),
-            completeMessage: null,
-            completedAt: null,
           };
         }
 
@@ -199,13 +211,8 @@ export class MilestonesController {
       }),
     );
 
-    const updatedPhase = await this.phasesService.update({
-      ...phase,
-      status: 'notStarted',
-    });
-
     return mapPhaseToEntityWithMilestones({
-      ...updatedPhase,
+      ...phase,
       milestones: phaseMilestones,
     });
   }

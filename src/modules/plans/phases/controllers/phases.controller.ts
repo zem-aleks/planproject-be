@@ -20,12 +20,12 @@ import { PhasesService } from '../services/phases.service';
 import { Project } from '../../projects/entities/project.entity';
 import { CustomRequest } from '../../../../shared/decorators/custom-request.decorator';
 import { UserPipe } from '../../../users/pipes/user.pipe';
-import { User } from '@supabase/supabase-js';
 import { PhaseAndProject, PhaseByIdPipe } from '../pipes/phase-by-id.pipe';
-import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import { PhasesAiService } from '../services/phases-ai.service';
 import { getProjectDay } from '../../projects/helpers/getProjectDay';
 import { ActiveProjectByIdPipe } from '../../projects/pipes/active-project-by-id.pipe';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { User } from '../../../users/entities/user.entity';
 
 @Controller('phases')
 @UseGuards(JwtAuthGuard)
@@ -33,6 +33,7 @@ export class PhasesController {
   constructor(
     private readonly phasesService: PhasesService,
     private readonly phasesAiService: PhasesAiService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Get(':projectId')
@@ -119,17 +120,21 @@ export class PhasesController {
   async modifyPhases(
     @Param('projectId', ActiveProjectByIdPipe) project: Project,
     @Body('message') message: string,
-    @AuthUser() user: User,
+    @CustomRequest(UserPipe) user: User,
   ) {
     if (!message || message.trim().length === 0) {
       throw new BadRequestException('Message is required');
     }
 
-    if (project.status !== 'analyzing') {
-      throw new BadRequestException('Project is not in analyzing state');
+    if (message.trim().length > 2000) {
+      throw new BadRequestException('Message is too long');
     }
 
     if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (user.subscription === 'basic') {
       throw new UnauthorizedException('Permissions denied');
     }
 
@@ -141,15 +146,15 @@ export class PhasesController {
       modificationMessage: message,
     });
 
-    const promises = existingPhases.map((phase) => {
-      const toBeRemoved = !projectPhases.find((p) => p.id === phase.id);
-      if (toBeRemoved) {
-        return this.phasesService.softDelete(phase.id);
-      }
-      return Promise.resolve();
-    });
+    const newPhasesMap = new Map(projectPhases.map((p) => [p.id, p]));
+    const phasesToRemove = existingPhases.filter(
+      ({ id }) => !newPhasesMap.has(id),
+    );
 
-    await Promise.all(promises);
+    if (phasesToRemove.length > 0) {
+      const phasesToRemoveIds = phasesToRemove.map((p) => p.id);
+      await this.phasesService.softDeleteMany(phasesToRemoveIds);
+    }
 
     const phases = await this.phasesService.createMany(
       projectPhases.map((phaseData) => {
@@ -165,9 +170,6 @@ export class PhasesController {
             timelineStartDay: phaseData.timelineStartDay,
             timelineEndDay: phaseData.timelineEndDay,
             projectId: project.id,
-            status: 'notStarted',
-            startedAt: new Date(),
-            completedAt: null,
           };
         }
 
@@ -186,6 +188,11 @@ export class PhasesController {
         };
       }),
     );
+
+    this.eventEmitter.emit('phase.updatedForProject', {
+      phases,
+      project,
+    });
 
     return phases.map(mapPhaseToEntity);
   }

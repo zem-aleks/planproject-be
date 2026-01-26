@@ -44,6 +44,10 @@ export class PhasesService {
     return this.repository.update(phaseId, data);
   }
 
+  async updateManyPartial(phaseIds: string[], data: Partial<Phase>) {
+    return this.repository.update(phaseIds, data);
+  }
+
   async updateByProjectPartial(projectId: string, data: Partial<Phase>) {
     return this.repository.update({ projectId }, data);
   }
@@ -91,6 +95,12 @@ export class PhasesService {
 
   async softDelete(phaseId: string) {
     return this.repository.softDelete(phaseId);
+  }
+
+  async softDeleteMany(phaseIds: string[]) {
+    const result = await this.repository.softDelete(phaseIds);
+    await this.milestonesService.softDeleteByPhases(phaseIds);
+    return result;
   }
 
   async activate(phase: Phase, projectDay: number) {
