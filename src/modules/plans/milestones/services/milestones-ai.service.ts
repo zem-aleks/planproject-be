@@ -90,6 +90,15 @@ For each milestone, provide:
 
 Make sure that the total daysNeeded for all milestones does not exceed ${phase.maxDaysNeeded} days.
 Make sure that the total daysNeeded for all milestones is at least ${phase.minDaysNeeded} days.
+
+Milestones should represent step-by-step guidance how to accomplish the project. It must be easy to understand and have a good description.
+Try to have a manageable amount of milestones. Usually it's nice to have 3-6 milestones per phase. But main criteria is how many days it takes. Feel free to go outside of this limit.
+Avoid milestones that take 10 and more days. Make a few smaller instead of them.
+Ideal case if a milestone takes 1-5 days. 
+
+Avoid many steps with documentation. You can mention it, but the project is most likely personal 
+idea and it makes sense to focus on the things that really make a good progress towards implementation. Only if a team works on it,
+add steps that are needed to organize proper team collaboration.
 `,
       ),
     ]);
@@ -178,7 +187,7 @@ Ideal case if a milestone takes 1-3 days.
 
 Avoid many steps with documentation. You can mention it, but the project is most likely personal 
 idea and it makes sense to focus on the things that really make a good progress towards implementation. Only if a team works on it,
-add needed steps to organize it.
+add steps that are needed to organize proper team collaboration.
 `,
       ),
     ]);

@@ -26,34 +26,61 @@ export class PhasesCreatedListener {
       return;
     }
 
-    try {
-      const { milestones } =
-        await this.milestonesAiService.generateProjectMilestones({
-          project,
-          phases,
-        });
+    await this.milestonesService.deleteForProject(project.id);
+    phases.map(async (phase: Phase) => {
+      try {
+        const { milestones } =
+          await this.milestonesAiService.generatePhaseMilestones({
+            phase,
+            project,
+            phases,
+          });
 
-      await this.milestonesService.deleteForProject(project.id);
-      await this.milestonesService.createMany(
-        milestones.map((milestone) => ({
-          ...milestone,
-          projectId: project.id,
-          userId: project.userId as string,
+        await this.milestonesService.createMany(
+          milestones.map((milestone) => ({
+            ...milestone,
+            projectId: project.id,
+            userId: project.userId as string,
+            phaseId: phase.id,
+            status: 'notStarted',
+            startedAt: new Date(),
+            completeMessage: null,
+            completedAt: null,
+          })),
+        );
+
+        await this.phasesService.updatePartial(phase.id, {
           status: 'notStarted',
-          startedAt: new Date(),
-          completeMessage: null,
-          completedAt: null,
-        })),
-      );
-      await this.phasesService.updateByProjectPartial(project.id, {
-        status: 'notStarted',
-      });
-    } catch (e) {
-      console.error(e);
-      await this.phasesService.updateByProjectPartial(project.id, {
-        status: 'error',
-      });
-    }
+        });
+      } catch (e) {
+        console.error(e);
+        await this.phasesService.updatePartial(phase.id, {
+          status: 'error',
+        });
+      }
+    });
+
+    // Solution to generate all milestones at once. Works slow, takes 1min
+    // const { milestones } =
+    //   await this.milestonesAiService.generateProjectMilestones({
+    //     project,
+    //     phases,
+    //   });
+    //
+    // await this.milestonesService.createMany(
+    //   milestones.map((milestone) => ({
+    //     ...milestone,
+    //     projectId: project.id,
+    //     userId: project.userId as string,
+    //     status: 'notStarted',
+    //     startedAt: new Date(),
+    //     completeMessage: null,
+    //     completedAt: null,
+    //   })),
+    // );
+    // await this.phasesService.updateByProjectPartial(project.id, {
+    //   status: 'notStarted',
+    // });
   }
 
   @OnEvent('phase.updatedForProject')
