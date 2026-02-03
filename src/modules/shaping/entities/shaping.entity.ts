@@ -25,6 +25,9 @@ export class Shaping {
   @Column({ nullable: false, type: 'simple-json' })
   messages: ShapeMessage[];
 
+  @Column({ nullable: false, type: 'simple-json', default: [] })
+  summaries: Array<ShapingSummary>;
+
   @Column({ nullable: false, default: 0 })
   score: number;
 
@@ -40,3 +43,10 @@ export class Shaping {
   @DeleteDateColumn()
   deletedAt?: Date;
 }
+
+export type ShapingSummary = {
+  content: string;
+  improvements: string;
+  onMessagesCount: number;
+  createdAt: Date;
+};

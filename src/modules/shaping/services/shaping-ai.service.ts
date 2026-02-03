@@ -79,6 +79,40 @@ Try to challenge different aspects of the idea for 5 turns only.
     ]);
   }
 
+  async summarizeShaping(shaping: Shaping) {
+    const previousSummary =
+      shaping.summaries.length > 0
+        ? shaping.summaries[shaping.summaries.length - 1]
+        : null;
+    const model = getModel('gpt-4o-mini', 0.5);
+    const structuredModel = model.withStructuredOutput(
+      z.object({
+        summary: z.string().describe('Idea summary. Markdown formatted'),
+        improvements: z
+          .string()
+          .describe(
+            'Additional information that can improve the shape of idea. Markdown formatted.',
+          ),
+      }),
+    );
+
+    return await structuredModel.invoke([
+      new SystemMessage(
+        `There is a conversation between user and an AI assistant about user's project idea.
+Your goal is to extract the key information and all available facts from this conversation and summarize it.
+It will be presented directly to the user to confirm good understanding of the idea.
+Try to make it short but keep the quality. It must indicate all important facts and aspects of this idea. 
+
+Improvements field is used to indicate gaps and topics that will help to make a shape of this idea more clear.
+Put here most valuable and significant questions or suggestions that will help to analyze this idea and transform it into actionable roadmap.
+
+${previousSummary ? `2 messages ago user got such summary: ${previousSummary.content}. Keep the structure and extend it if new input was provided` : ``}
+`,
+      ),
+      ...getLangchainMessages(shaping.messages),
+    ]);
+  }
+
   async summarizeProjectDescription(shaping: Shaping) {
     const model = getModel('gpt-4o-mini', 0.5);
     const structuredModel = model.withStructuredOutput(

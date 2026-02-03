@@ -120,6 +120,7 @@ export class ShapingController {
       ],
       score: 0,
       status: 'started',
+      summaries: [],
     });
 
     const project = await this.projectsService.createDraft({

@@ -18,6 +18,7 @@ import { ProjectByIdPipe } from '../../plans/projects/pipes/project-by-id.pipe';
 import { Project } from '../../plans/projects/entities/project.entity';
 import { notReachable } from '../../../shared/utils/notReachable';
 import { ProjectsAiService } from '../../plans/projects/services/projects-ai.service';
+import { ShapingSummary } from '../entities/shaping.entity';
 
 @Controller('start')
 export class ShapingPublicController {
@@ -126,6 +127,7 @@ export class ShapingPublicController {
       ],
       score: 0,
       status: 'started',
+      summaries: [],
     });
 
     const { followUpQuestion, followUpAnswers, assistantComment, score } =
@@ -191,6 +193,47 @@ export class ShapingPublicController {
     });
 
     return mapProjectToEntity(updatedProject, this.logoPath);
+  }
+
+  @Post(':shapingId/summary')
+  async summarizeShaping(
+    @Body('clientId', ParseUUIDPipe) clientId: string,
+    @Param('shapingId', ParseUUIDPipe) shapingId: string,
+  ) {
+    const shaping = await this.shapingService.getOneByIdAndClientIdOrThrow({
+      shapingId,
+      clientId,
+    });
+
+    if (shaping.score < 70) {
+      throw new BadRequestException(
+        'Shaping score must be at least 70 to summarize.',
+      );
+    }
+
+    const messagesCount = shaping.messages.length;
+    if (shaping.summaries.length > 0) {
+      const lastSummary = shaping.summaries[shaping.summaries.length - 1];
+      if (lastSummary.onMessagesCount >= messagesCount) {
+        console.log(lastSummary.onMessagesCount, messagesCount);
+        return mapShapingToEntity(shaping);
+      }
+    }
+
+    const { summary, improvements } =
+      await this.shapingAiService.summarizeShaping(shaping);
+
+    const newSummary: ShapingSummary = {
+      content: summary,
+      improvements,
+      onMessagesCount: messagesCount,
+      createdAt: new Date(),
+    };
+
+    const summaries = [...shaping.summaries, newSummary];
+    await this.shapingService.updatePartial(shaping.id, { summaries });
+
+    return mapShapingToEntity({ ...shaping, summaries });
   }
 
   @Post(':shapingId')

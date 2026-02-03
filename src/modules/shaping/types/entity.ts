@@ -1,13 +1,11 @@
 export type ShapingEntity = {
   id: string;
-  clientId: string;
-  userId: string | null;
   projectId: string | null;
   messages: ShapeMessage[];
+  summary: string | null;
+  improvements: string | null;
   score: number;
   status: 'started' | 'processing' | 'finished' | 'error';
-  createdAt: Date;
-  updatedAt: Date;
 };
 
 export type ShapeMessage = UserMessage | AssistantMessage;
