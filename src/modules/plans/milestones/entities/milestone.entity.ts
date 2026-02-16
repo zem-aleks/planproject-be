@@ -9,7 +9,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { MilestoneStatus } from '../types/entity';
+import { MilestoneStatus, MilestoneStep } from '../types/entity';
 import { Phase } from '../../phases/entities/phase.entity';
 import { Task } from '../../tasks/entities/task.entity';
 
@@ -47,8 +47,8 @@ export class Milestone {
   @Column({ nullable: true, type: 'varchar' })
   usefulResources: string | null;
 
-  @Column({ nullable: true, type: 'varchar' })
-  steps: string | null;
+  @Column({ type: 'simple-json', default: '[]' })
+  steps: MilestoneStep[];
 
   @Column({ nullable: true, type: 'text', default: null })
   completeMessage: string | null;

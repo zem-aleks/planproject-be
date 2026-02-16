@@ -42,10 +42,20 @@ export class MilestonesAiService {
                   'Useful resources for this milestone. Links, articles, books, examples of similar projects etc. References that can help to complete the milestone. Markdown formatted',
                 ),
               steps: z
-                .string()
-                .nullable()
+                .array(
+                  z.object({
+                    title: z
+                      .string()
+                      .describe('Short actionable title of the step'),
+                    description: z
+                      .string()
+                      .describe(
+                        'Detailed description of what needs to be done in this step',
+                      ),
+                  }),
+                )
                 .describe(
-                  'List of simple steps how the milestone can be accomplished. Markdown formatted',
+                  'List of steps how the milestone can be accomplished',
                 ),
               orderIndex: z
                 .number()
@@ -86,7 +96,7 @@ For each milestone, provide:
 - definitionOfDone: A clear definition of done for this milestone. When can this milestone be considered as done
 - orderIndex: The order index of the milestone within the phase
 - usefulResources: Links, articles, books, examples of similar projects etc. References that can help to complete the milestone.
-- steps: List of simple steps how the milestone can be accomplished.
+- steps: List of steps how the milestone can be accomplished. Each step has a title (short actionable title) and a description (detailed explanation of what needs to be done).
 
 Make sure that the total daysNeeded for all milestones does not exceed ${phase.maxDaysNeeded} days.
 Make sure that the total daysNeeded for all milestones is at least ${phase.minDaysNeeded} days.
@@ -139,10 +149,20 @@ add steps that are needed to organize proper team collaboration.
                   'Useful resources for this milestone. Links, articles, books, examples of similar projects etc. References that can help to complete the milestone. Markdown formatted',
                 ),
               steps: z
-                .string()
-                .nullable()
+                .array(
+                  z.object({
+                    title: z
+                      .string()
+                      .describe('Short actionable title of the step'),
+                    description: z
+                      .string()
+                      .describe(
+                        'Detailed description of what needs to be done in this step',
+                      ),
+                  }),
+                )
                 .describe(
-                  'List of simple steps how the milestone can be accomplished. Markdown formatted',
+                  'List of steps how the milestone can be accomplished',
                 ),
               orderIndex: z
                 .number()
@@ -175,7 +195,7 @@ For each milestone, provide:
 - definitionOfDone: A clear definition of done for this milestone. When can this milestone be considered as done
 - orderIndex: The order index of the milestone within the phase
 - usefulResources: Links, articles, books, examples of similar projects etc. References that can help to complete the milestone.
-- steps: List of simple steps how the milestone can be accomplished.
+- steps: List of steps how the milestone can be accomplished. Each step has a title (short actionable title) and a description (detailed explanation of what needs to be done).
 
 Make sure that the total daysNeeded for all milestones in a phase does not exceed maxDaysNeeded days for the specified phase.
 Make sure that the total daysNeeded for all milestones in a phase is at least minDaysNeeded days for the specified phase.
@@ -228,10 +248,20 @@ add steps that are needed to organize proper team collaboration.
                   'Useful resources for this milestone. Links, articles, books, examples of similar projects etc. References that can help to complete the milestone. Markdown formatted',
                 ),
               steps: z
-                .string()
-                .nullable()
+                .array(
+                  z.object({
+                    title: z
+                      .string()
+                      .describe('Short actionable title of the step'),
+                    description: z
+                      .string()
+                      .describe(
+                        'Detailed description of what needs to be done in this step',
+                      ),
+                  }),
+                )
                 .describe(
-                  'List of simple steps how the milestone can be accomplished. Markdown formatted',
+                  'List of steps how the milestone can be accomplished',
                 ),
               orderIndex: z
                 .number()
@@ -264,7 +294,7 @@ For each milestone, provide:
 - definitionOfDone: A clear definition of done for this milestone. When can this milestone be considered as done
 - orderIndex: The order index of the milestone within the phase
 - usefulResources: Links, articles, books, examples of similar projects etc. References that can help to complete the milestone.
-- steps: List of simple steps how the milestone can be accomplished.
+- steps: List of steps how the milestone can be accomplished. Each step has a title (short actionable title) and a description (detailed explanation of what needs to be done).
 
 Make sure that the total daysNeeded for all milestones in a phase does not exceed maxDaysNeeded days for the specified phase.
 Make sure that the total daysNeeded for all milestones in a phase is at least minDaysNeeded days for the specified phase.
@@ -321,10 +351,20 @@ Milestones that have status "active" can not be removed. If there's an attempt t
                   'Useful resources for this milestone. Links, articles, books, examples of similar projects etc. References that can help to complete the milestone. Markdown formatted',
                 ),
               steps: z
-                .string()
-                .nullable()
+                .array(
+                  z.object({
+                    title: z
+                      .string()
+                      .describe('Short actionable title of the step'),
+                    description: z
+                      .string()
+                      .describe(
+                        'Detailed description of what needs to be done in this step',
+                      ),
+                  }),
+                )
                 .describe(
-                  'List of simple steps how the milestone can be accomplished. Markdown formatted',
+                  'List of steps how the milestone can be accomplished',
                 ),
               orderIndex: z
                 .number()

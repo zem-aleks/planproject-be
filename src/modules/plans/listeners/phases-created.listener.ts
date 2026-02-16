@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { randomUUID } from 'crypto';
 import { Project } from '../projects/entities/project.entity';
 import { Phase } from '../phases/entities/phase.entity';
 import { MilestonesAiService } from '../milestones/services/milestones-ai.service';
@@ -39,6 +40,11 @@ export class PhasesCreatedListener {
         await this.milestonesService.createMany(
           milestones.map((milestone) => ({
             ...milestone,
+            steps: milestone.steps.map((step) => ({
+              ...step,
+              id: randomUUID(),
+              completed: false,
+            })),
             projectId: project.id,
             userId: project.userId as string,
             phaseId: phase.id,
@@ -110,6 +116,11 @@ export class PhasesCreatedListener {
       await this.milestonesService.createMany(
         milestones.map((milestone) => ({
           ...milestone,
+          steps: milestone.steps.map((step) => ({
+            ...step,
+            id: randomUUID(),
+            completed: false,
+          })),
           projectId: project.id,
           userId: project.userId as string,
           status: 'notStarted',

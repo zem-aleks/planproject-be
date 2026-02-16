@@ -1,5 +1,12 @@
 import { PhaseEntity } from '../../phases/types/entity';
 
+export type MilestoneStep = {
+  id: string;
+  title: string;
+  description: string;
+  completed: boolean;
+};
+
 export type MilestoneEntity = {
   id: string;
   phaseId: string;
@@ -9,7 +16,7 @@ export type MilestoneEntity = {
   definitionOfDone: string;
   daysNeeded: number;
   usefulResources: string | null;
-  steps: string | null;
+  steps: MilestoneStep[];
   orderIndex: number;
   status: MilestoneStatus;
   completeMessage: string | null;

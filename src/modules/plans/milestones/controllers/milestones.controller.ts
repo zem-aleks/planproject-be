@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -12,6 +13,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
 import { mapMilestoneToEntity } from '../mappers/mapMilestoneToEntity';
 import { MilestonesService } from '../services/milestones.service';
@@ -107,6 +109,11 @@ export class MilestonesController {
     const phaseMilestones = await this.milestonesService.createMany(
       milestones.map((milestone) => ({
         ...milestone,
+        steps: milestone.steps.map((step) => ({
+          ...step,
+          id: randomUUID(),
+          completed: false,
+        })),
         phaseId: phase.id,
         projectId: project.id,
         userId: user.id,
@@ -188,10 +195,17 @@ export class MilestonesController {
     const phaseMilestones = await this.milestonesService.createMany(
       updatedMilestones.map((milestone) => {
         const existingMilestone = milestonesMap.get(milestone.id);
+        const steps = milestone.steps.map((step) => ({
+          ...step,
+          id: randomUUID(),
+          completed: false,
+        }));
+
         if (existingMilestone) {
           return {
             ...existingMilestone,
             ...milestone,
+            steps,
             phaseId: phase.id,
             projectId: project.id,
             userId: user.id,
@@ -200,6 +214,7 @@ export class MilestonesController {
 
         return {
           ...milestone,
+          steps,
           phaseId: phase.id,
           projectId: project.id,
           userId: user.id,
@@ -256,6 +271,39 @@ export class MilestonesController {
       ...updatedMilestone,
       tasks: tasks.map(mapTaskToEntity),
     };
+  }
+
+  @Patch(':milestoneId/steps/:stepId/toggle')
+  async toggleStep(
+    @Param('milestoneId', ParseUUIDPipe) milestoneId: string,
+    @Param('stepId') stepId: string,
+    @CustomRequest(UserPipe) user: User,
+  ) {
+    const milestone =
+      await this.milestonesService.getOneByIdOtThrow(milestoneId);
+    const project = await this.projectsService.getOneByIdOrThrow(
+      milestone.projectId,
+    );
+
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const stepIndex = milestone.steps.findIndex((s) => s.id === stepId);
+    if (stepIndex === -1) {
+      throw new NotFoundException('Step not found');
+    }
+
+    const updatedSteps = milestone.steps.map((step, i) =>
+      i === stepIndex ? { ...step, completed: !step.completed } : step,
+    );
+
+    const updatedMilestone = await this.milestonesService.update({
+      ...milestone,
+      steps: updatedSteps,
+    });
+
+    return mapMilestoneToEntity(updatedMilestone);
   }
 
   @Delete(':milestoneId')
