@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { SubscriptionType } from './types/entity';
 
 @Injectable()
 export class UsersService {
@@ -32,7 +33,7 @@ export class UsersService {
     });
   }
 
-  create(data: { email: string; id: string }) {
+  create(data: { email: string; id: string; subscription: SubscriptionType }) {
     return this.userRepository.save(data);
   }
 

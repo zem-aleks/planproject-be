@@ -24,6 +24,7 @@ export class UserPipe implements PipeTransform<AuthRequest, Promise<User>> {
       return this.usersService.create({
         email: request.user.email,
         id: request.user.id,
+        subscription: 'business', // TODO: for now all users will be business
       });
     }
 
