@@ -37,6 +37,7 @@ export const mapProjectToPreviewEntity = (
     startedAt: project.startedAt,
     daysNeeded: project.daysNeeded,
     activated: project.activated,
+    soul: project.soul,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'
         ? project.logoUrl

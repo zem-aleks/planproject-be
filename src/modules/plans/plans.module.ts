@@ -23,6 +23,8 @@ import { PlansService } from './services/plans.service';
 import { ProjectShapingStartedListener } from './listeners/project-shaping-started.listener';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { PhasesCreatedListener } from './listeners/phases-created.listener';
+import { SoulAiService } from './projects/services/soul-ai.service';
+import { ShapingModule } from '../shaping/shaping.module';
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { PhasesCreatedListener } from './listeners/phases-created.listener';
     UsersModule,
     SupabaseModule,
     forwardRef(() => SubscriptionsModule),
+    forwardRef(() => ShapingModule),
   ],
   controllers: [
     ProjectsController,
@@ -40,6 +43,7 @@ import { PhasesCreatedListener } from './listeners/phases-created.listener';
   providers: [
     ProjectsService,
     ProjectsAiService,
+    SoulAiService,
     PhasesService,
     PhasesAiService,
     MilestonesService,

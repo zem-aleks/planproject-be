@@ -28,6 +28,9 @@ import { UserPipe } from '../../../users/pipes/user.pipe';
 import { MembershipService } from '../../../subscriptions/services/membership.service';
 import { User } from 'src/modules/users/entities/user.entity';
 import { ActiveProjectByIdPipe } from '../pipes/active-project-by-id.pipe';
+import { SoulAiService } from '../services/soul-ai.service';
+import { ShapingService } from '../../../shaping/services/shaping.service';
+import { notReachable } from '../../../../shared/utils/notReachable';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -36,6 +39,8 @@ export class ProjectsController {
 
   constructor(
     private readonly projectsService: ProjectsService,
+    private readonly soulAiService: SoulAiService,
+    private readonly shapingService: ShapingService,
     private readonly plansService: PlansService,
     private readonly storageService: SupabaseStorageService,
     private readonly membershipService: MembershipService,
@@ -59,6 +64,57 @@ export class ProjectsController {
 
     await this.plansService.activateNextMilestone(updatedProject);
     return mapProjectToEntity(updatedProject, this.logoPath);
+  }
+
+  @Patch(':projectId/init-soul')
+  async initSoul(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const shaping = await this.shapingService.getOneByProjectId({
+      projectId: project.id,
+      userId: project.userId,
+    });
+
+    if (!shaping) {
+      throw new BadRequestException('No shaping data');
+    }
+
+    switch (project.status) {
+      case 'soulBuilding':
+        throw new BadRequestException('Soul creation in progress...');
+
+      case 'shaping':
+      case 'soulError':
+        const projectWithSoul = await this.projectsService.generateSoul(
+          project,
+          shaping,
+        );
+        return mapProjectToEntity(projectWithSoul, this.logoPath);
+
+      case 'draft':
+      case 'soulDone':
+      case 'analyzing':
+      case 'active':
+      case 'completed':
+      case 'onHold':
+      case 'cancelled':
+        if (!project.soul) {
+          const projectWithSoul = await this.projectsService.generateSoul(
+            project,
+            shaping,
+          );
+          return mapProjectToEntity(projectWithSoul, this.logoPath);
+        }
+        throw new BadRequestException('Soul already exists!');
+
+      default:
+        return notReachable(project.status);
+    }
   }
 
   @Get()

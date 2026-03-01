@@ -9,6 +9,7 @@ export type ProjectPreviewEntity = {
   daysNeeded: number | null;
   startedAt: Date;
   activated: boolean;
+  soul: ProjectSoul | null;
 };
 
 export type ProjectEntity = {
@@ -30,6 +31,9 @@ export type ProjectEntity = {
 export type ProjectStatus =
   | 'draft' // we started to get shaping messages but not finished yet
   | 'shaping' // the shaping conversation is finished, waiting for phases to be generated
+  | 'soulBuilding'
+  | 'soulError'
+  | 'soulDone'
   | 'analyzing' // phases are generated, milestones may be in progress. Opportunity to modify the structure of phases and milestones
   | 'active' // work on the project is started, phases and milestones are being worked on
   | 'completed' // all phases and milestones are completed
@@ -50,3 +54,141 @@ export const CREATE_PROJECT_SCHEMA = z.object({
 });
 
 export type ProjectCreateData = z.infer<typeof CREATE_PROJECT_SCHEMA>;
+
+export const PROJECT_SOUL_SCHEMA = z.object({
+  name: z.string().describe('Project name or best guess from conversation'),
+  summary: z
+    .string()
+    .describe(
+      '2-3 sentences: what it is, who its for, what problem it solves or goal it achieves',
+    ),
+  domain: z
+    .string()
+    .describe(
+      'Freeform domain label, e.g. "software development", "competitive chess", "business launch", "fitness", "creative writing", "game development"',
+    ),
+
+  currentState: z.object({
+    description: z
+      .string()
+      .describe(
+        'Where the user is right now relative to this goal. What exists already — skills, code, assets, experience, progress',
+      ),
+    keyMetrics: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Quantifiable current state indicators, e.g. "ELO 2200", "0 lines of code", "$5k saved"',
+      ),
+  }),
+
+  desiredOutcomes: z
+    .array(
+      z.object({
+        outcome: z.string().describe('Concrete, measurable success criterion'),
+        inferred: z
+          .boolean()
+          .describe('True if AI added this, not explicitly stated by user'),
+      }),
+    )
+    .default([]),
+
+  targetUsers: z
+    .object({
+      description: z
+        .string()
+        .describe('Who benefits from this project and in what context'),
+      segments: z
+        .array(z.string())
+        .describe('Distinct user or audience groups'),
+    })
+    .optional()
+    .describe('Omit if not applicable, e.g. for personal goals'),
+
+  workstreams: z
+    .array(
+      z.object({
+        name: z.string().describe('Workstream name'),
+        description: z
+          .string()
+          .describe('One-line description of this area of effort'),
+        priority: z.enum(['must', 'should', 'nice-to-have']),
+        inferred: z.boolean().describe('True if AI added this, not the user'),
+      }),
+    )
+    .default([]),
+
+  resources: z
+    .array(
+      z.object({
+        name: z.string().describe('Resource, tool, technology, or asset name'),
+        relevance: z.string().describe('How this is used in the project'),
+        tentative: z.boolean().describe('True if mentioned but not confirmed'),
+      }),
+    )
+    .default([]),
+
+  constraints: z
+    .array(
+      z.object({
+        type: z
+          .string()
+          .describe(
+            'e.g. timeline, budget, team, technical, platform, physical, geographic, skill',
+          ),
+        description: z.string(),
+      }),
+    )
+    .default([]),
+
+  decisions: z
+    .array(
+      z.object({
+        topic: z.string(),
+        chosen: z.string(),
+        rationale: z.string().optional(),
+      }),
+    )
+    .default([]),
+
+  openQuestions: z
+    .array(
+      z.object({
+        topic: z.string(),
+        context: z.string().optional().describe('Why this needs deciding'),
+        status: z.enum(['discussed_unresolved', 'not_discussed']),
+        impact: z.enum(['blocking', 'important', 'minor']),
+        impactReason: z
+          .string()
+          .describe(
+            'One sentence: what gets stuck or degraded if this stays unresolved',
+          ),
+        suggestedOptions: z
+          .array(z.string())
+          .optional()
+          .describe('2-3 concrete options if possible'),
+      }),
+    )
+    .default([]),
+
+  assumptions: z
+    .array(
+      z.object({
+        assumption: z.string(),
+        reasoning: z.string(),
+        affectedAreas: z
+          .array(z.string())
+          .describe('Which workstreams, entities, or outcomes this touches'),
+      }),
+    )
+    .default([]),
+
+  domainContext: z
+    .array(z.string())
+    .default([])
+    .describe(
+      'Domain-specific knowledge agents will need. Coding conventions for software, regulations for business, training principles for fitness, etc.',
+    ),
+});
+
+export type ProjectSoul = z.infer<typeof PROJECT_SOUL_SCHEMA>;

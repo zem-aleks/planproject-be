@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { ProjectStatus } from '../types/entity';
+import { ProjectSoul, ProjectStatus } from '../types/entity';
 
 @Entity()
 export class Project {
@@ -33,6 +33,9 @@ export class Project {
 
   @Column({ nullable: true, type: 'varchar' })
   summary: string | null;
+
+  @Column({ nullable: true, type: 'simple-json', default: null })
+  soul: ProjectSoul | null;
 
   @Column({ nullable: true, type: 'varchar' })
   logoUrl: string | null;
