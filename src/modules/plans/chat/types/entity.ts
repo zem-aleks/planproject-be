@@ -7,6 +7,10 @@ export const CHAT_CONTEXT_TYPES = [
   'phase',
   'milestone',
   'task',
+  'open_question',
+  'workstream',
+  'assumption',
+  'decision',
 ] as const;
 
 export type ChatContextType = (typeof CHAT_CONTEXT_TYPES)[number];
@@ -64,7 +68,7 @@ export const CREATE_CHAT_SCHEMA = z.object({
   context: z
     .object({
       type: z.enum(CHAT_CONTEXT_TYPES),
-      entityId: z.string().uuid().optional(),
+      entityId: z.string().trim().optional(),
       label: z.string().trim().optional(),
     })
     .optional(),

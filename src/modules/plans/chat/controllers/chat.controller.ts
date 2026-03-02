@@ -21,6 +21,8 @@ import { Project } from '../../projects/entities/project.entity';
 import { User } from '../../../users/entities/user.entity';
 import { ChatService } from '../services/chat.service';
 import { mapChatToEntity } from '../mappers/mapChatToEntity';
+import { mapProjectToEntity } from '../../projects/mappers/mapProjectToEntity';
+import { SupabaseStorageService } from '../../../supabase/supabase-storage.service';
 import {
   ChatStreamEvent,
   CREATE_CHAT_SCHEMA,
@@ -36,7 +38,14 @@ import { ActiveProjectByIdPipe } from '../../projects/pipes/active-project-by-id
 @Controller('projects/:projectId/chats')
 @UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  readonly logoPath: string;
+
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly storageService: SupabaseStorageService,
+  ) {
+    this.logoPath = this.storageService.getBucketUrl('logo') + '/';
+  }
 
   @Get()
   async getAllChats(
@@ -239,13 +248,13 @@ export class ChatController {
       throw new UnauthorizedException('Permissions denied');
     }
 
-    await this.chatService.approveProposal({
+    const updatedProject = await this.chatService.approveProposal({
       chatId,
       proposalId,
-      projectId: project.id,
+      project,
     });
 
-    return { status: 'approved' };
+    return mapProjectToEntity(updatedProject, this.logoPath);
   }
 
   @Post(':chatId/proposals/:proposalId/reject')

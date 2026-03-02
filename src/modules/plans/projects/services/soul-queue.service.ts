@@ -9,6 +9,7 @@ import { LessThanOrEqual, Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import { Project } from '../entities/project.entity';
+import { ChatMessage } from '../../chat/entities/chat-message.entity';
 import { SoulAiService } from './soul-ai.service';
 import {
   AddSoulOperationData,
@@ -23,6 +24,8 @@ export class SoulQueueService {
   constructor(
     @InjectRepository(Project)
     private readonly repository: Repository<Project>,
+    @InjectRepository(ChatMessage)
+    private readonly chatMessageRepository: Repository<ChatMessage>,
     private readonly soulAiService: SoulAiService,
   ) {}
 
@@ -51,8 +54,8 @@ export class SoulQueueService {
     project: Project,
     operationId: string,
   ): Promise<Project> {
-    const index = project.soulQueue.findIndex((op) => op.id === operationId);
-    if (index === -1) {
+    const removed = project.soulQueue.find((op) => op.id === operationId);
+    if (!removed) {
       throw new NotFoundException('Operation not found in queue');
     }
 
@@ -62,7 +65,24 @@ export class SoulQueueService {
       project.soulQueueStartedAt = null;
     }
 
+    if (removed.type === 'apply_proposal') {
+      await this.revertProposal(removed.messageId, removed.proposalId);
+    }
+
     return this.repository.save(project);
+  }
+
+  private async revertProposal(
+    messageId: string,
+    proposalId: string,
+  ): Promise<void> {
+    const message = await this.chatMessageRepository.findOne({
+      where: { id: messageId },
+    });
+    if (!message?.proposals?.[proposalId]) return;
+
+    message.proposals[proposalId].status = 'pending';
+    await this.chatMessageRepository.save(message);
   }
 
   async applyQueue(project: Project): Promise<Project> {
@@ -72,94 +92,111 @@ export class SoulQueueService {
     if (!project.soul) {
       throw new BadRequestException('Project has no soul');
     }
+    if (project.soulQueueApplying) {
+      throw new BadRequestException('Queue is already being applied');
+    }
 
-    const soul: ProjectSoul = JSON.parse(JSON.stringify(project.soul));
-    const changeDescriptions: string[] = [];
+    project.soulQueueApplying = true;
+    await this.repository.save(project);
 
-    for (const op of project.soulQueue) {
-      switch (op.type) {
-        case 'answer_open_question': {
-          const qIdx = soul.openQuestions.findIndex(
-            (q) => q.topic === op.topic,
-          );
-          if (qIdx !== -1) {
-            soul.openQuestions.splice(qIdx, 1);
-          }
-          soul.decisions.push({
-            topic: op.topic,
-            chosen: op.chosenOption,
-            rationale: null,
-          });
-          changeDescriptions.push(
-            `The open question "${op.topic}" was answered with: "${op.chosenOption}".`,
-          );
-          break;
-        }
-        case 'remove_open_question': {
-          const qIdx = soul.openQuestions.findIndex(
-            (q) => q.topic === op.topic,
-          );
-          if (qIdx !== -1) {
-            soul.openQuestions.splice(qIdx, 1);
-          }
-          break;
-        }
-        case 'accept_assumption': {
-          const aIdx = soul.assumptions.findIndex(
-            (a) => a.assumption === op.assumption,
-          );
-          if (aIdx !== -1) {
-            const assumption = soul.assumptions[aIdx];
-            soul.assumptions.splice(aIdx, 1);
+    try {
+      const soul: ProjectSoul = JSON.parse(JSON.stringify(project.soul));
+      const changeDescriptions: string[] = [];
+
+      for (const op of project.soulQueue) {
+        switch (op.type) {
+          case 'answer_open_question': {
+            const qIdx = soul.openQuestions.findIndex(
+              (q) => q.topic === op.topic,
+            );
+            if (qIdx !== -1) {
+              soul.openQuestions.splice(qIdx, 1);
+            }
             soul.decisions.push({
-              topic: op.assumption,
-              chosen: 'Confirmed by user',
-              rationale: assumption.reasoning,
-            });
-          } else {
-            soul.decisions.push({
-              topic: op.assumption,
-              chosen: 'Confirmed by user',
+              topic: op.topic,
+              chosen: op.chosenOption,
               rationale: null,
             });
+            changeDescriptions.push(
+              `The open question "${op.topic}" was answered with: "${op.chosenOption}".`,
+            );
+            break;
           }
-          changeDescriptions.push(
-            `The assumption "${op.assumption}" was confirmed by the user.`,
-          );
-          break;
-        }
-        case 'remove_assumption': {
-          const aIdx = soul.assumptions.findIndex(
-            (a) => a.assumption === op.assumption,
-          );
-          if (aIdx !== -1) {
-            soul.assumptions.splice(aIdx, 1);
+          case 'remove_open_question': {
+            const qIdx = soul.openQuestions.findIndex(
+              (q) => q.topic === op.topic,
+            );
+            if (qIdx !== -1) {
+              soul.openQuestions.splice(qIdx, 1);
+            }
+            break;
           }
-          break;
+          case 'accept_assumption': {
+            const aIdx = soul.assumptions.findIndex(
+              (a) => a.assumption === op.assumption,
+            );
+            if (aIdx !== -1) {
+              const assumption = soul.assumptions[aIdx];
+              soul.assumptions.splice(aIdx, 1);
+              soul.decisions.push({
+                topic: op.assumption,
+                chosen: 'Confirmed by user',
+                rationale: assumption.reasoning,
+              });
+            } else {
+              soul.decisions.push({
+                topic: op.assumption,
+                chosen: 'Confirmed by user',
+                rationale: null,
+              });
+            }
+            changeDescriptions.push(
+              `The assumption "${op.assumption}" was confirmed by the user.`,
+            );
+            break;
+          }
+          case 'remove_assumption': {
+            const aIdx = soul.assumptions.findIndex(
+              (a) => a.assumption === op.assumption,
+            );
+            if (aIdx !== -1) {
+              soul.assumptions.splice(aIdx, 1);
+            }
+            break;
+          }
+          case 'apply_proposal': {
+            changeDescriptions.push(op.description);
+            break;
+          }
         }
       }
+
+      let finalSoul: ProjectSoul;
+
+      if (changeDescriptions.length > 0) {
+        const combinedDescription =
+          changeDescriptions.join(' ') +
+          ' All direct mutations (removing items, adding decisions) have already been applied. Now check for ripple effects: do these changes affect constraints, assumptions, workstreams, resources, open questions, or other sections? Apply any necessary updates to those sections only.';
+
+        finalSoul = await this.soulAiService.generateUpdatedSoul(
+          soul,
+          combinedDescription,
+        );
+      } else {
+        finalSoul = soul;
+      }
+
+      project.soul = finalSoul;
+      project.soulQueue = [];
+      project.soulQueueStartedAt = null;
+      project.soulQueueApplying = false;
+
+      return this.repository.save(project);
+    } catch (error) {
+      project.soulQueueApplying = false;
+      await this.repository.save(project);
+      throw error;
     }
-
-    let finalSoul: ProjectSoul;
-
-    if (changeDescriptions.length > 0) {
-      const combinedDescription =
-        changeDescriptions.join(' ') +
-        ' All direct mutations (removing items, adding decisions) have already been applied. Now check for ripple effects: do these changes affect constraints, assumptions, workstreams, resources, open questions, or other sections? Apply any necessary updates to those sections only.';
-
-      finalSoul = await this.soulAiService.generateUpdatedSoul(
-        soul,
-        combinedDescription,
-      );
-    } else {
-      finalSoul = soul;
-    }
-
-    project.soul = finalSoul;
-    project.soulQueue = [];
-    project.soulQueueStartedAt = null;
-
-    return this.repository.save(project);
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -212,6 +249,8 @@ export class SoulQueueService {
         }
         break;
       }
+      case 'apply_proposal':
+        break;
     }
   }
 
@@ -237,6 +276,8 @@ export class SoulQueueService {
               op.type === 'remove_assumption') &&
             op.assumption === data.assumption
           );
+        case 'apply_proposal':
+          return false;
       }
     });
 

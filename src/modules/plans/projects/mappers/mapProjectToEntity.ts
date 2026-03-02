@@ -21,6 +21,7 @@ export const mapProjectToEntity = (
     soul: project.soul,
     soulQueue: project.soulQueue,
     soulQueueStartedAt: project.soulQueueStartedAt,
+    soulQueueApplying: project.soulQueueApplying,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'
         ? project.logoUrl
@@ -43,6 +44,7 @@ export const mapProjectToPreviewEntity = (
     soul: project.soul,
     soulQueue: project.soulQueue,
     soulQueueStartedAt: project.soulQueueStartedAt,
+    soulQueueApplying: project.soulQueueApplying,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'
         ? project.logoUrl

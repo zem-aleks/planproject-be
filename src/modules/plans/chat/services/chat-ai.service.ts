@@ -16,7 +16,64 @@ import {
 } from '../prompts/chat';
 
 import { proposeSoulUpdateTool } from '../tools/propose-soul-update';
-import { ChatContext } from '../types/entity';
+import { ChatContext, ChatContextType } from '../types/entity';
+
+const SOUL_CONTEXT_TYPES: ChatContextType[] = [
+  'open_question',
+  'workstream',
+  'assumption',
+  'decision',
+];
+
+function extractSoulEntityDetails(
+  soul: ProjectSoul,
+  context: ChatContext,
+): string | undefined {
+  const { type, entityId } = context;
+  if (!entityId || !SOUL_CONTEXT_TYPES.includes(type)) return undefined;
+
+  switch (type) {
+    case 'open_question': {
+      const item = soul.openQuestions.find((q) => q.topic === entityId);
+      if (!item) return undefined;
+      const lines = [`**Open Question: ${item.topic}**`];
+      if (item.context) lines.push(`- Context: ${item.context}`);
+      lines.push(`- Impact: ${item.impact}`);
+      lines.push(`- Impact reason: ${item.impactReason}`);
+      if (item.suggestedOptions?.length) {
+        lines.push(`- Suggested options: ${item.suggestedOptions.join(', ')}`);
+      }
+      return lines.join('\n');
+    }
+    case 'workstream': {
+      const item = soul.workstreams.find((w) => w.name === entityId);
+      if (!item) return undefined;
+      return [
+        `**Workstream: ${item.name}**`,
+        `- Description: ${item.description}`,
+        `- Priority: ${item.priority}`,
+      ].join('\n');
+    }
+    case 'assumption': {
+      const item = soul.assumptions.find((a) => a.assumption === entityId);
+      if (!item) return undefined;
+      return [
+        `**Assumption: ${item.assumption}**`,
+        `- Reasoning: ${item.reasoning}`,
+        `- Affected areas: ${item.affectedAreas.join(', ')}`,
+      ].join('\n');
+    }
+    case 'decision': {
+      const item = soul.decisions.find((d) => d.topic === entityId);
+      if (!item) return undefined;
+      const lines = [`**Decision: ${item.topic}**`, `- Chosen: ${item.chosen}`];
+      if (item.rationale) lines.push(`- Rationale: ${item.rationale}`);
+      return lines.join('\n');
+    }
+    default:
+      return undefined;
+  }
+}
 
 export type StreamChunkEvent = { type: 'chunk'; content: string };
 export type StreamProposalEvent = {
@@ -77,9 +134,14 @@ export class ChatAiService {
       proposeSoulUpdateTool,
     ]);
 
+    const entityDetails = context
+      ? extractSoulEntityDetails(soul, context)
+      : undefined;
+
     const systemPrompt = buildChatSystemPrompt({
       soul: renderSoul(soul),
       context,
+      entityDetails,
     });
 
     const langchainMessages: (

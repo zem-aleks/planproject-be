@@ -12,6 +12,7 @@ export type ProjectPreviewEntity = {
   soul: ProjectSoul | null;
   soulQueue: SoulOperation[];
   soulQueueStartedAt: Date | null;
+  soulQueueApplying: boolean;
 };
 
 export type ProjectEntity = {
@@ -31,6 +32,7 @@ export type ProjectEntity = {
   soul: ProjectSoul | null;
   soulQueue: SoulOperation[];
   soulQueueStartedAt: Date | null;
+  soulQueueApplying: boolean;
 };
 
 export type ProjectStatus =
@@ -200,6 +202,12 @@ export const ADD_SOUL_OPERATION_SCHEMA = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('remove_assumption'),
     assumption: z.string().trim(),
+  }),
+  z.object({
+    type: z.literal('apply_proposal'),
+    description: z.string().trim(),
+    proposalId: z.string().trim(),
+    messageId: z.string().trim(),
   }),
 ]);
 

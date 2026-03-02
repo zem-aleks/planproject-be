@@ -12,7 +12,8 @@ import { ChatAiService, StreamEvent } from './chat-ai.service';
 import { ProjectSoul } from '../../projects/types/entity';
 import { ChatContext, PendingProposal } from '../types/entity';
 import { ProjectsService } from '../../projects/services/projects.service';
-import { SoulAiService } from '../../projects/services/soul-ai.service';
+import { SoulQueueService } from '../../projects/services/soul-queue.service';
+import { Project } from '../../projects/entities/project.entity';
 
 @Injectable()
 export class ChatService {
@@ -23,7 +24,7 @@ export class ChatService {
     private readonly messageRepository: Repository<ChatMessage>,
     private readonly chatAiService: ChatAiService,
     private readonly projectsService: ProjectsService,
-    private readonly soulAiService: SoulAiService,
+    private readonly soulQueueService: SoulQueueService,
   ) {}
 
   async getAllByProjectId(params: {
@@ -122,8 +123,8 @@ export class ChatService {
   async approveProposal(params: {
     chatId: string;
     proposalId: string;
-    projectId: string;
-  }): Promise<void> {
+    project: Project;
+  }): Promise<Project> {
     const chat = await this.getOneByIdOrThrow(params.chatId);
 
     const message = chat.messages.find(
@@ -137,22 +138,20 @@ export class ChatService {
       throw new BadRequestException(`Proposal already ${proposal.status}`);
     }
 
-    const project = await this.projectsService.getOneByIdOrThrow(
-      params.projectId,
+    const updatedProject = await this.soulQueueService.addOperation(
+      params.project,
+      {
+        type: 'apply_proposal',
+        description: proposal.description,
+        proposalId: params.proposalId,
+        messageId: message.id,
+      },
     );
-    if (!project.soul) {
-      throw new BadRequestException('Project has no soul to update');
-    }
-
-    const updatedSoul = await this.soulAiService.generateUpdatedSoul(
-      project.soul,
-      proposal.description,
-    );
-    project.soul = updatedSoul;
-    await this.projectsService.update(project);
 
     proposal.status = 'approved';
     await this.messageRepository.save(message);
+
+    return updatedProject;
   }
 
   async rejectProposal(params: {

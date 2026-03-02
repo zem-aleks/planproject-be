@@ -5,6 +5,10 @@ const CONTEXT_PROMPTS: Record<ChatContext['type'], string> = {
   phase: `You are a helpful project advisor. The user is focused on a specific phase of their project. Help them plan, prioritize, and resolve issues within this phase. Reference phase details when available.`,
   milestone: `You are a helpful project advisor. The user is working on a specific milestone. Help them break down work, identify blockers, and stay on track toward completing this milestone.`,
   task: `You are a helpful project advisor. The user is working on a specific task. Help them with implementation details, problem-solving, and completing this task effectively.`,
+  open_question: `You are a helpful project advisor. The user wants to think through and resolve a specific open question in their project. Help them evaluate options, weigh trade-offs, and reach a clear decision.`,
+  workstream: `You are a helpful project advisor. The user is focused on a specific workstream. Help them plan, scope, break down work, and identify concrete next steps to make progress on this workstream.`,
+  assumption: `You are a helpful project advisor. The user wants to examine a specific assumption their project relies on. Help them validate or challenge this assumption, assess risks, and determine what changes if the assumption is wrong.`,
+  decision: `You are a helpful project advisor. The user wants to discuss a specific decision that was made in their project. Help them revisit the rationale, evaluate whether circumstances have changed, and determine if the decision still holds or should be reconsidered.`,
 };
 
 const GUIDELINES = `## Guidelines
