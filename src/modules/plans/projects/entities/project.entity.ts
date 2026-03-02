@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { ProjectSoul, ProjectStatus } from '../types/entity';
+import { ProjectSoul, ProjectStatus, SoulOperation } from '../types/entity';
 
 @Entity()
 export class Project {
@@ -36,6 +36,12 @@ export class Project {
 
   @Column({ nullable: true, type: 'simple-json', default: null })
   soul: ProjectSoul | null;
+
+  @Column({ type: 'simple-json', default: '[]' })
+  soulQueue: SoulOperation[];
+
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  soulQueueStartedAt: Date | null;
 
   @Column({ nullable: true, type: 'varchar' })
   logoUrl: string | null;

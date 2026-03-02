@@ -21,3 +21,12 @@ Determine what domain this project belongs to. It could be software development,
 11. For suggestedOptions in openQuestions — provide 2-3 concrete choices when possible. These become brainstorm starters.
 12. For open questions impact, consider what work gets blocked or degraded if this question stays open. Blocking means multiple workstreams cannot be decomposed. Important means at least one workstream is affected. Minor means work can proceed and this can be decided later.
 `;
+
+export const GENERATE_UPDATED_SOUL_PROMPT = `You are updating a project profile (soul). You will receive the current profile as JSON and a description of changes to apply.
+
+Your job:
+1. Apply EVERY change described — do not skip any.
+2. Preserve everything else exactly as-is.
+3. When an open question is resolved, REMOVE it from openQuestions and ADD a corresponding entry to decisions.
+4. Think about ripple effects: if a decision affects constraints, assumptions, workstreams, or other sections, update those too.
+5. Output the complete updated profile.`;

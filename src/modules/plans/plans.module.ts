@@ -24,11 +24,24 @@ import { ProjectShapingStartedListener } from './listeners/project-shaping-start
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { PhasesCreatedListener } from './listeners/phases-created.listener';
 import { SoulAiService } from './projects/services/soul-ai.service';
+import { SoulQueueService } from './projects/services/soul-queue.service';
 import { ShapingModule } from '../shaping/shaping.module';
+import { Chat } from './chat/entities/chat.entity';
+import { ChatMessage } from './chat/entities/chat-message.entity';
+import { ChatController } from './chat/controllers/chat.controller';
+import { ChatService } from './chat/services/chat.service';
+import { ChatAiService } from './chat/services/chat-ai.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Project, Phase, Milestone, Task]),
+    TypeOrmModule.forFeature([
+      Project,
+      Phase,
+      Milestone,
+      Task,
+      Chat,
+      ChatMessage,
+    ]),
     UsersModule,
     SupabaseModule,
     forwardRef(() => SubscriptionsModule),
@@ -39,11 +52,13 @@ import { ShapingModule } from '../shaping/shaping.module';
     PhasesController,
     MilestonesController,
     TasksController,
+    ChatController,
   ],
   providers: [
     ProjectsService,
     ProjectsAiService,
     SoulAiService,
+    SoulQueueService,
     PhasesService,
     PhasesAiService,
     MilestonesService,
@@ -53,6 +68,8 @@ import { ShapingModule } from '../shaping/shaping.module';
     PlansService,
     ProjectShapingStartedListener,
     PhasesCreatedListener,
+    ChatService,
+    ChatAiService,
   ],
   exports: [
     ProjectsService,

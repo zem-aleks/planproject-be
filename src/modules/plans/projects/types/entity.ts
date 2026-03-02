@@ -10,6 +10,8 @@ export type ProjectPreviewEntity = {
   startedAt: Date;
   activated: boolean;
   soul: ProjectSoul | null;
+  soulQueue: SoulOperation[];
+  soulQueueStartedAt: Date | null;
 };
 
 export type ProjectEntity = {
@@ -26,6 +28,9 @@ export type ProjectEntity = {
   completedAt: Date | null;
   status: ProjectStatus;
   activated: boolean;
+  soul: ProjectSoul | null;
+  soulQueue: SoulOperation[];
+  soulQueueStartedAt: Date | null;
 };
 
 export type ProjectStatus =
@@ -76,22 +81,20 @@ export const PROJECT_SOUL_SCHEMA = z.object({
       ),
     keyMetrics: z
       .array(z.string())
-      .optional()
+      .nullable()
       .describe(
         'Quantifiable current state indicators, e.g. "ELO 2200", "0 lines of code", "$5k saved"',
       ),
   }),
 
-  desiredOutcomes: z
-    .array(
-      z.object({
-        outcome: z.string().describe('Concrete, measurable success criterion'),
-        inferred: z
-          .boolean()
-          .describe('True if AI added this, not explicitly stated by user'),
-      }),
-    )
-    .default([]),
+  desiredOutcomes: z.array(
+    z.object({
+      outcome: z.string().describe('Concrete, measurable success criterion'),
+      inferred: z
+        .boolean()
+        .describe('True if AI added this, not explicitly stated by user'),
+    }),
+  ),
 
   targetUsers: z
     .object({
@@ -102,93 +105,112 @@ export const PROJECT_SOUL_SCHEMA = z.object({
         .array(z.string())
         .describe('Distinct user or audience groups'),
     })
-    .optional()
-    .describe('Omit if not applicable, e.g. for personal goals'),
+    .nullable()
+    .describe('Null if not applicable, e.g. for personal goals'),
 
-  workstreams: z
-    .array(
-      z.object({
-        name: z.string().describe('Workstream name'),
-        description: z
-          .string()
-          .describe('One-line description of this area of effort'),
-        priority: z.enum(['must', 'should', 'nice-to-have']),
-        inferred: z.boolean().describe('True if AI added this, not the user'),
-      }),
-    )
-    .default([]),
+  workstreams: z.array(
+    z.object({
+      name: z.string().describe('Workstream name'),
+      description: z
+        .string()
+        .describe('One-line description of this area of effort'),
+      priority: z.enum(['must', 'should', 'nice-to-have']),
+      inferred: z.boolean().describe('True if AI added this, not the user'),
+    }),
+  ),
 
-  resources: z
-    .array(
-      z.object({
-        name: z.string().describe('Resource, tool, technology, or asset name'),
-        relevance: z.string().describe('How this is used in the project'),
-        tentative: z.boolean().describe('True if mentioned but not confirmed'),
-      }),
-    )
-    .default([]),
+  resources: z.array(
+    z.object({
+      name: z.string().describe('Resource, tool, technology, or asset name'),
+      relevance: z.string().describe('How this is used in the project'),
+      tentative: z.boolean().describe('True if mentioned but not confirmed'),
+    }),
+  ),
 
-  constraints: z
-    .array(
-      z.object({
-        type: z
-          .string()
-          .describe(
-            'e.g. timeline, budget, team, technical, platform, physical, geographic, skill',
-          ),
-        description: z.string(),
-      }),
-    )
-    .default([]),
+  constraints: z.array(
+    z.object({
+      type: z
+        .string()
+        .describe(
+          'e.g. timeline, budget, team, technical, platform, physical, geographic, skill',
+        ),
+      description: z.string(),
+    }),
+  ),
 
-  decisions: z
-    .array(
-      z.object({
-        topic: z.string(),
-        chosen: z.string(),
-        rationale: z.string().optional(),
-      }),
-    )
-    .default([]),
+  decisions: z.array(
+    z.object({
+      topic: z.string(),
+      chosen: z.string(),
+      rationale: z.string().nullable(),
+    }),
+  ),
 
-  openQuestions: z
-    .array(
-      z.object({
-        topic: z.string(),
-        context: z.string().optional().describe('Why this needs deciding'),
-        status: z.enum(['discussed_unresolved', 'not_discussed']),
-        impact: z.enum(['blocking', 'important', 'minor']),
-        impactReason: z
-          .string()
-          .describe(
-            'One sentence: what gets stuck or degraded if this stays unresolved',
-          ),
-        suggestedOptions: z
-          .array(z.string())
-          .optional()
-          .describe('2-3 concrete options if possible'),
-      }),
-    )
-    .default([]),
+  openQuestions: z.array(
+    z.object({
+      topic: z.string(),
+      context: z.string().nullable().describe('Why this needs deciding'),
+      status: z.enum(['discussed_unresolved', 'not_discussed']),
+      impact: z.enum(['blocking', 'important', 'minor']),
+      impactReason: z
+        .string()
+        .describe(
+          'One sentence: what gets stuck or degraded if this stays unresolved',
+        ),
+      suggestedOptions: z
+        .array(z.string())
+        .nullable()
+        .describe('2-3 concrete options if possible'),
+    }),
+  ),
 
-  assumptions: z
-    .array(
-      z.object({
-        assumption: z.string(),
-        reasoning: z.string(),
-        affectedAreas: z
-          .array(z.string())
-          .describe('Which workstreams, entities, or outcomes this touches'),
-      }),
-    )
-    .default([]),
+  assumptions: z.array(
+    z.object({
+      assumption: z.string(),
+      reasoning: z.string(),
+      affectedAreas: z
+        .array(z.string())
+        .describe('Which workstreams, entities, or outcomes this touches'),
+    }),
+  ),
 
   domainContext: z
     .array(z.string())
-    .default([])
     .describe(
       'Domain-specific knowledge agents will need. Coding conventions for software, regulations for business, training principles for fitness, etc.',
     ),
 });
 
 export type ProjectSoul = z.infer<typeof PROJECT_SOUL_SCHEMA>;
+
+export const ADD_SOUL_OPERATION_SCHEMA = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('answer_open_question'),
+    topic: z.string().trim(),
+    chosenOption: z.string().trim(),
+  }),
+  z.object({
+    type: z.literal('remove_open_question'),
+    topic: z.string().trim(),
+  }),
+  z.object({
+    type: z.literal('accept_assumption'),
+    assumption: z.string().trim(),
+  }),
+  z.object({
+    type: z.literal('remove_assumption'),
+    assumption: z.string().trim(),
+  }),
+]);
+
+export type AddSoulOperationData = z.infer<typeof ADD_SOUL_OPERATION_SCHEMA>;
+
+export type SoulOperation = AddSoulOperationData & { id: string };
+
+export const REMOVE_SOUL_OPERATION_SCHEMA = z.object({
+  operationId: z.string().trim(),
+});
+
+export type RemoveSoulOperationData = z.infer<
+  typeof REMOVE_SOUL_OPERATION_SCHEMA
+>;

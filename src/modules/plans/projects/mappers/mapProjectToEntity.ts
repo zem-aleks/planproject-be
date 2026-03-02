@@ -18,6 +18,9 @@ export const mapProjectToEntity = (
     shapingId: project.shapingId,
     daysNeeded: project.daysNeeded,
     activated: project.activated,
+    soul: project.soul,
+    soulQueue: project.soulQueue,
+    soulQueueStartedAt: project.soulQueueStartedAt,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'
         ? project.logoUrl
@@ -38,6 +41,8 @@ export const mapProjectToPreviewEntity = (
     daysNeeded: project.daysNeeded,
     activated: project.activated,
     soul: project.soul,
+    soulQueue: project.soulQueue,
+    soulQueueStartedAt: project.soulQueueStartedAt,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'
         ? project.logoUrl

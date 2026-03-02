@@ -6,12 +6,20 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from '../services/projects.service';
 import { ZodValidationPipe } from '../../../../shared/pipes/zod-validation.pipe';
-import { CREATE_PROJECT_SCHEMA, ProjectCreateData } from '../types/entity';
+import {
+  ADD_SOUL_OPERATION_SCHEMA,
+  AddSoulOperationData,
+  CREATE_PROJECT_SCHEMA,
+  ProjectCreateData,
+  REMOVE_SOUL_OPERATION_SCHEMA,
+  RemoveSoulOperationData,
+} from '../types/entity';
 import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
 import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import {
@@ -29,6 +37,7 @@ import { MembershipService } from '../../../subscriptions/services/membership.se
 import { User } from 'src/modules/users/entities/user.entity';
 import { ActiveProjectByIdPipe } from '../pipes/active-project-by-id.pipe';
 import { SoulAiService } from '../services/soul-ai.service';
+import { SoulQueueService } from '../services/soul-queue.service';
 import { ShapingService } from '../../../shaping/services/shaping.service';
 import { notReachable } from '../../../../shared/utils/notReachable';
 
@@ -40,6 +49,7 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly soulAiService: SoulAiService,
+    private readonly soulQueueService: SoulQueueService,
     private readonly shapingService: ShapingService,
     private readonly plansService: PlansService,
     private readonly storageService: SupabaseStorageService,
@@ -188,6 +198,49 @@ export class ProjectsController {
 
     await this.projectsService.updatePartial(project.id, { activated: true });
     return mapProjectToEntity({ ...project, activated: true }, this.logoPath);
+  }
+
+  @Post(':projectId/soul/queue')
+  async addToSoulQueue(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @Body(new ZodValidationPipe(ADD_SOUL_OPERATION_SCHEMA))
+    data: AddSoulOperationData,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const updated = await this.soulQueueService.addOperation(project, data);
+    return mapProjectToEntity(updated, this.logoPath);
+  }
+
+  @Delete(':projectId/soul/queue')
+  async removeFromSoulQueue(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @Body(new ZodValidationPipe(REMOVE_SOUL_OPERATION_SCHEMA))
+    data: RemoveSoulOperationData,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const updated = await this.soulQueueService.removeOperation(
+      project,
+      data.operationId,
+    );
+    return mapProjectToEntity(updated, this.logoPath);
+  }
+
+  @Post(':projectId/soul/queue/apply')
+  async applySoulQueue(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const updated = await this.soulQueueService.applyQueue(project);
+    return mapProjectToEntity(updated, this.logoPath);
   }
 
   @Delete(':projectId')

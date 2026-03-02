@@ -101,6 +101,8 @@ export class ProjectsService {
       daysNeeded: null,
       completedAt: null,
       soul: null,
+      soulQueue: [],
+      soulQueueStartedAt: null,
       activated: false,
     });
   }
