@@ -372,6 +372,11 @@ Milestones that have status "active" can not be removed. If there's an attempt t
             }),
           )
           .describe('A list of project phase milestones'),
+        removedMilestoneIds: z
+          .array(z.string().uuid())
+          .describe(
+            'IDs of existing milestones to remove. Only if the modification explicitly requires removal.',
+          ),
       }),
     );
 
@@ -394,6 +399,11 @@ The phase already has the following milestones in JSON format:
 ${JSON.stringify(milestones, null, 2)}
 
 Your task is to process user comment and do according changes to the milestones list.
+
+IMPORTANT RULES:
+- You MUST return ALL existing milestones in "updatedMilestones" with their original IDs, even if unchanged.
+- Only add milestone IDs to "removedMilestoneIds" if the request explicitly asks to remove them.
+- For new milestones, generate a new UUID for the id field.
 
 Make sure that the total daysNeeded for all milestones does not exceed ${phase.maxDaysNeeded} days.
 Make sure that the total daysNeeded for all milestones is at least ${phase.minDaysNeeded} days.

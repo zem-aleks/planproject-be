@@ -214,6 +214,16 @@ export const ADD_SOUL_OPERATION_SCHEMA = z.discriminatedUnion('type', [
     proposalId: z.string().trim(),
     messageId: z.string().trim(),
   }),
+  z.object({
+    type: z.literal('apply_plan_proposal'),
+    description: z.string().trim(),
+    proposalId: z.string().trim(),
+    messageId: z.string().trim(),
+    changes: z.object({
+      soul: z.string().optional(),
+      plan: z.string().optional(),
+    }),
+  }),
 ]);
 
 export type AddSoulOperationData = z.infer<typeof ADD_SOUL_OPERATION_SCHEMA>;

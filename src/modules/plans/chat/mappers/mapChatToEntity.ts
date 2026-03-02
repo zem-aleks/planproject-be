@@ -1,6 +1,13 @@
 import { Chat } from '../entities/chat.entity';
 import { ChatEntity, ChatMessageEntity, ProposalEntity } from '../types/entity';
 import { ChatMessage } from '../entities/chat-message.entity';
+import { PendingProposal } from '../types/entity';
+
+const mapProposalToEntity = (p: PendingProposal): ProposalEntity => ({
+  id: p.id,
+  description: p.description,
+  status: p.status,
+});
 
 const mapMessageToEntity = (message: ChatMessage): ChatMessageEntity => {
   if (message.role === 'user') {
@@ -13,11 +20,7 @@ const mapMessageToEntity = (message: ChatMessage): ChatMessageEntity => {
   }
 
   const proposals: ProposalEntity[] = message.proposals
-    ? Object.values(message.proposals).map((p) => ({
-        id: p.id,
-        description: p.description,
-        status: p.status,
-      }))
+    ? Object.values(message.proposals).map(mapProposalToEntity)
     : [];
 
   return {

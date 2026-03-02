@@ -23,12 +23,19 @@ export type ChatContext = {
 
 // --- Pending Proposals ---
 
+export type ProposalChanges = {
+  soul?: string;
+  plan?: string;
+};
+
 export type PendingProposal = {
   id: string;
   toolCallId: string;
+  toolName: string;
   description: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  changes?: ProposalChanges;
 };
 
 export type ProposalEntity = {
@@ -94,9 +101,16 @@ export type ChatStreamDone = {
   chatName?: string;
 };
 export type ChatStreamError = { type: 'error'; messageId: string | null };
+export type ChatStreamToolCall = { type: 'tool_call'; name: string };
+export type ChatStreamProposalProgress = {
+  type: 'proposal_progress';
+  stage: 'analyzing' | 'generating_changes';
+};
 export type ChatStreamEvent =
   | ChatStreamChunk
   | ChatStreamConfirm
+  | ChatStreamToolCall
+  | ChatStreamProposalProgress
   | ChatStreamDone
   | ChatStreamError;
 

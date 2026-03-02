@@ -4,16 +4,18 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Chat } from '../entities/chat.entity';
 import { ChatMessage } from '../entities/chat-message.entity';
-import { ChatAiService, StreamEvent } from './chat-ai.service';
+import { ChatAiService, StreamEvent, ToolExecutor } from './chat-ai.service';
 import { ProjectSoul } from '../../projects/types/entity';
-import { ChatContext, PendingProposal } from '../types/entity';
+import { ChatContext, PendingProposal, ProposalChanges } from '../types/entity';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { SoulQueueService } from '../../projects/services/soul-queue.service';
 import { Project } from '../../projects/entities/project.entity';
+import { PhasesService } from '../../phases/services/phases.service';
+import { MilestonesService } from '../../milestones/services/milestones.service';
 
 @Injectable()
 export class ChatService {
@@ -25,6 +27,8 @@ export class ChatService {
     private readonly chatAiService: ChatAiService,
     private readonly projectsService: ProjectsService,
     private readonly soulQueueService: SoulQueueService,
+    private readonly phasesService: PhasesService,
+    private readonly milestonesService: MilestonesService,
   ) {}
 
   async getAllByProjectId(params: {
@@ -67,6 +71,72 @@ export class ChatService {
     return chat;
   }
 
+  async searchMessages(
+    projectId: string,
+    query: string,
+  ): Promise<ChatMessage[]> {
+    return this.messageRepository.find({
+      where: {
+        chat: { projectId },
+        content: ILike(`%${query}%`),
+      },
+      relations: ['chat'],
+      order: { createdAt: 'DESC' },
+      take: 20,
+    });
+  }
+
+  createToolExecutor(projectId: string): ToolExecutor {
+    return async (name: string, args: Record<string, unknown>) => {
+      switch (name) {
+        case 'search_chats': {
+          const query = args.query as string;
+          const messages = await this.searchMessages(projectId, query);
+          if (messages.length === 0) {
+            return `No messages found matching "${query}".`;
+          }
+          return messages
+            .map(
+              (m) =>
+                `[${m.role}] (chat: ${m.chat?.name ?? 'unnamed'}, ${m.createdAt.toISOString()}): ${m.content.slice(0, 300)}`,
+            )
+            .join('\n---\n');
+        }
+        case 'load_phases': {
+          const phases = await this.phasesService.getAll(projectId);
+          if (phases.length === 0) {
+            return 'No phases found for this project.';
+          }
+          return phases
+            .map(
+              (p) =>
+                `- **${p.title}** (${p.status}) — ${p.description ?? 'No description'}. Days ${p.timelineStartDay}–${p.timelineEndDay}.`,
+            )
+            .join('\n');
+        }
+        case 'load_milestones': {
+          const phaseId = args.phaseId as string | undefined;
+          const milestones = phaseId
+            ? await this.milestonesService.getAll(phaseId)
+            : await this.milestonesService.getAllByProject(projectId);
+          if (milestones.length === 0) {
+            return phaseId
+              ? 'No milestones found for this phase.'
+              : 'No milestones found for this project.';
+          }
+          return milestones
+            .map(
+              (m) =>
+                `- **${m.title}** (${m.status}) — ${m.description}. Definition of done: ${m.definitionOfDone}. ~${m.daysNeeded} days.`,
+            )
+            .join('\n');
+        }
+        default:
+          return `Unknown tool: ${name}`;
+      }
+    };
+  }
+
   async sendMessageStream(params: {
     chat: Chat;
     message: string;
@@ -79,11 +149,13 @@ export class ChatService {
     });
 
     const chat = await this.getOneByIdOrThrow(params.chat.id);
+    const toolExecutor = this.createToolExecutor(chat.projectId);
 
     const stream = this.chatAiService.streamResponseWithTools(
       chat.messages,
       params.soul,
       chat.context,
+      toolExecutor,
     );
 
     return { stream };
@@ -92,13 +164,17 @@ export class ChatService {
   buildProposal(params: {
     description: string;
     toolCallId: string;
+    toolName: string;
+    changes?: ProposalChanges;
   }): PendingProposal {
     return {
       id: uuidv4(),
       toolCallId: params.toolCallId,
+      toolName: params.toolName,
       description: params.description,
       status: 'pending',
       createdAt: new Date().toISOString(),
+      ...(params.changes ? { changes: params.changes } : {}),
     };
   }
 
@@ -141,10 +217,11 @@ export class ChatService {
     const updatedProject = await this.soulQueueService.addOperation(
       params.project,
       {
-        type: 'apply_proposal',
+        type: 'apply_plan_proposal',
         description: proposal.description,
         proposalId: params.proposalId,
         messageId: message.id,
+        changes: proposal.changes ?? { soul: proposal.description },
       },
     );
 

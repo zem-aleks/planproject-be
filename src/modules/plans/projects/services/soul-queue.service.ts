@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Project } from '../entities/project.entity';
 import { ChatMessage } from '../../chat/entities/chat-message.entity';
 import { SoulAiService } from './soul-ai.service';
@@ -16,6 +17,10 @@ import {
   ProjectSoul,
   SoulOperation,
 } from '../types/entity';
+import { PhasesService } from '../../phases/services/phases.service';
+import { PhasesAiService } from '../../phases/services/phases-ai.service';
+import { MilestonesService } from '../../milestones/services/milestones.service';
+import { MilestonesAiService } from '../../milestones/services/milestones-ai.service';
 
 @Injectable()
 export class SoulQueueService {
@@ -27,6 +32,11 @@ export class SoulQueueService {
     @InjectRepository(ChatMessage)
     private readonly chatMessageRepository: Repository<ChatMessage>,
     private readonly soulAiService: SoulAiService,
+    private readonly phasesService: PhasesService,
+    private readonly phasesAiService: PhasesAiService,
+    private readonly milestonesService: MilestonesService,
+    private readonly milestonesAiService: MilestonesAiService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async addOperation(
@@ -65,7 +75,10 @@ export class SoulQueueService {
       project.soulQueueStartedAt = null;
     }
 
-    if (removed.type === 'apply_proposal') {
+    if (
+      removed.type === 'apply_proposal' ||
+      removed.type === 'apply_plan_proposal'
+    ) {
       await this.revertProposal(removed.messageId, removed.proposalId);
     }
 
@@ -168,6 +181,15 @@ export class SoulQueueService {
             changeDescriptions.push(op.description);
             break;
           }
+          case 'apply_plan_proposal': {
+            if (op.changes.plan) {
+              await this.applyPlanUpdate(project, op.changes.plan);
+            }
+            if (op.changes.soul) {
+              changeDescriptions.push(op.changes.soul);
+            }
+            break;
+          }
         }
       }
 
@@ -226,6 +248,129 @@ export class SoulQueueService {
     }
   }
 
+  private async applyPlanUpdate(project: Project, plan: string): Promise<void> {
+    const oldPhases = await this.phasesService.getAll(project.id);
+    const oldPhasesMap = new Map(oldPhases.map((p) => [p.id, p]));
+
+    const { projectPhases } = await this.phasesAiService.modifyProjectPhases({
+      project,
+      phases: oldPhases,
+      modificationMessage: plan,
+    });
+
+    const newPhasesMap = new Map(projectPhases.map((p) => [p.id, p]));
+    const phasesToRemove = oldPhases.filter(({ id }) => !newPhasesMap.has(id));
+
+    if (phasesToRemove.length > 0) {
+      await this.phasesService.softDeleteMany(phasesToRemove.map((p) => p.id));
+    }
+
+    const phases = await this.phasesService.createMany(
+      projectPhases.map((phaseData) => {
+        const existingPhase = oldPhasesMap.get(phaseData.id || '');
+        if (existingPhase) {
+          return {
+            ...existingPhase,
+            title: phaseData.phaseTitle,
+            description: phaseData.phaseDescription,
+            minDaysNeeded: phaseData.minDaysNeeded,
+            maxDaysNeeded: phaseData.maxDaysNeeded,
+            expertiseNeeded: phaseData.expertiseNeeded,
+            timelineStartDay: phaseData.timelineStartDay,
+            timelineEndDay: phaseData.timelineEndDay,
+            projectId: project.id,
+          };
+        }
+
+        return {
+          title: phaseData.phaseTitle,
+          description: phaseData.phaseDescription,
+          minDaysNeeded: phaseData.minDaysNeeded,
+          maxDaysNeeded: phaseData.maxDaysNeeded,
+          expertiseNeeded: phaseData.expertiseNeeded,
+          timelineStartDay: phaseData.timelineStartDay,
+          timelineEndDay: phaseData.timelineEndDay,
+          projectId: project.id,
+          status: 'building',
+          startedAt: new Date(),
+          completedAt: null,
+        };
+      }),
+    );
+
+    this.eventEmitter.emit('phase.updatedForProject', { phases, project });
+
+    // Detect affected phases: new phases + modified phases
+    const affectedPhases = phases.filter((phase) => {
+      const oldPhase = oldPhasesMap.get(phase.id);
+      if (!oldPhase) return true; // new phase
+      return (
+        oldPhase.title !== phase.title ||
+        oldPhase.description !== phase.description
+      );
+    });
+
+    for (const phase of affectedPhases) {
+      const existingMilestones = await this.milestonesService.getAll(phase.id);
+      const milestonesMap = new Map(existingMilestones.map((m) => [m.id, m]));
+
+      const { updatedMilestones, removedMilestoneIds } =
+        await this.milestonesAiService.modifyPhaseMilestones({
+          project,
+          phase,
+          milestones: existingMilestones,
+          modificationMessage: plan,
+        });
+
+      if (removedMilestoneIds.length > 0) {
+        const validIds = removedMilestoneIds.filter((id) =>
+          milestonesMap.has(id),
+        );
+        if (validIds.length > 0) {
+          await this.milestonesService.softDeleteMany(validIds);
+        }
+      }
+
+      const milestonesToSave = updatedMilestones.filter(
+        (m) => !removedMilestoneIds.includes(m.id),
+      );
+
+      await this.milestonesService.createMany(
+        milestonesToSave.map((milestone) => {
+          const existingMilestone = milestonesMap.get(milestone.id);
+          const steps = milestone.steps.map((step) => ({
+            ...step,
+            id: randomUUID(),
+            completed: false,
+          }));
+
+          if (existingMilestone) {
+            return {
+              ...existingMilestone,
+              ...milestone,
+              steps,
+              phaseId: phase.id,
+              projectId: project.id,
+              userId: project.userId,
+            };
+          }
+
+          return {
+            ...milestone,
+            steps,
+            phaseId: phase.id,
+            projectId: project.id,
+            userId: project.userId,
+            status: 'notStarted',
+            startedAt: new Date(),
+            completeMessage: null,
+            completedAt: null,
+          };
+        }),
+      );
+    }
+  }
+
   private validateTargetExists(
     soul: ProjectSoul,
     data: AddSoulOperationData,
@@ -250,6 +395,7 @@ export class SoulQueueService {
         break;
       }
       case 'apply_proposal':
+      case 'apply_plan_proposal':
         break;
     }
   }
@@ -277,6 +423,7 @@ export class SoulQueueService {
             op.assumption === data.assumption
           );
         case 'apply_proposal':
+        case 'apply_plan_proposal':
           return false;
       }
     });

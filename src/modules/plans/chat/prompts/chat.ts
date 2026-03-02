@@ -19,28 +19,52 @@ const GUIDELINES = `## Guidelines
 - If the user asks about something outside the project scope, answer helpfully but gently steer back to the project context.
 - Format responses with markdown for readability.`;
 
-const TOOL_GUIDELINES = `## Soul Update Tool
-You have access to a \`propose_soul_update\` tool that can modify the project profile.
-The user must approve every proposal before it takes effect, so don't hesitate to propose when you spot something.
+const PROPOSAL_TOOL_GUIDELINES = `## Proposal Tool — \`propose_plan_update\`
+You have a single tool to propose ANY changes to the project. It handles project profile (soul) and plan structure (phases + milestones) in one proposal. The user approves or rejects the entire proposal as a unit.
+
+Fill in only the sections that need changes:
+- \`soul\` — for project profile changes (goals, constraints, assumptions, open questions, workstreams, decisions)
+- \`plan\` — for all plan structure changes (phases and milestones). Describe what phases to add, remove, reorder, or modify, and any milestone changes. The backend will figure out which phases and milestones to update.
 
 ### When to propose
-- **Resolved open questions** — the user gives a clear answer to something listed in Open Questions. The open question should be removed and a corresponding decision should be added.
-- **New constraints discovered** — the user mentions a budget limit, deadline, technical limitation, team size, etc. that isn't already in constraints.
-- **New assumptions** — the conversation reveals an assumption the plan relies on that isn't captured yet.
-- **Priority changes** — the user says a workstream is more/less important.
-- **New workstreams or outcomes** — the user describes new work areas or success criteria.
-- **Corrections** — the user says something in the profile is wrong or outdated.
-- **Explicit requests** — the user directly asks to change the profile.
+- **Resolved open questions** — the user gives a clear answer → remove the open question, add a decision, update affected areas.
+- **New constraints, assumptions, or priority changes** — capture them in \`soul\`.
+- **Phase restructuring** — the user wants to add/remove/reorder phases → use \`plan\`.
+- **Milestone changes** — the user wants to modify deliverables → use \`plan\`.
+- **Cross-cutting changes** — e.g. "restructure the plan" → fill in \`plan\` + possibly \`soul\` in one proposal.
+- **Explicit requests** — the user directly asks to change something.
 
 ### When NOT to propose
 - Casual brainstorming that hasn't reached a conclusion yet.
-- Information already captured in the profile.
-- Vague or speculative statements the user hasn't committed to.
+- Information already captured in the project.
+- The user is just asking about the plan — use lookup tools instead.
 
 ### How to propose
-- Write a thorough \`description\` that covers ALL changes: what sections are affected, what gets added/removed/updated, and the specific values.
-- Think about ripple effects: if the user resolves an open question, does it also affect constraints, assumptions, or workstream priorities? Include everything in one proposal.
+- **Always load data first.** Call \`load_phases\` and/or \`load_milestones\` before proposing changes that affect them.
+- Write a clear \`description\` summarizing ALL changes for the user (this is shown in the approval prompt).
+- In \`plan\`, describe the intent clearly: "Add a marketing phase with milestones for content creation and social media launch" — no need for phase IDs or structured arrays.
+- Think about ripple effects: if phases change, do milestones need updating too? Describe everything in one proposal.
 - Continue your response naturally after the tool call — explain what you proposed and why.`;
+
+const LOOKUP_TOOL_GUIDELINES = `## Lookup Tools
+You have read-only tools to look up project data. Use them to give grounded, specific answers.
+
+### \`search_chats\` — search past chat messages
+- Use when the user says "did we discuss…", "remember when…", or references a past conversation.
+- Also useful when you need to recall context from earlier chats about a topic.
+
+### \`load_phases\` — load all project phases
+- Use when the user asks about phases, timeline, overall progress, or project structure.
+- Returns phase titles, statuses, descriptions, and timeline day ranges.
+
+### \`load_milestones\` — load milestones (optionally by phase)
+- Use when the user asks about milestones, deliverables, specific progress, or definition of done.
+- Pass a \`phaseId\` if the user is focused on a specific phase; omit to get all milestones.
+
+### When to use lookup tools
+- **Prefer looking up** over guessing. If the user asks about phases or milestones and you don't have the data in the conversation yet, call the tool.
+- **Don't over-fetch.** If the conversation already contains the data the user is asking about, just reference it.
+- You can call multiple tools in a single turn if needed (e.g., load phases + load milestones).`;
 
 export function buildChatSystemPrompt(params: {
   soul: string;
@@ -50,7 +74,15 @@ export function buildChatSystemPrompt(params: {
   const contextType = params.context?.type ?? 'general';
   const rolePrompt = CONTEXT_PROMPTS[contextType];
 
-  const parts = [rolePrompt, '', GUIDELINES, '', TOOL_GUIDELINES];
+  const parts = [
+    rolePrompt,
+    '',
+    GUIDELINES,
+    '',
+    PROPOSAL_TOOL_GUIDELINES,
+    '',
+    LOOKUP_TOOL_GUIDELINES,
+  ];
 
   if (params.entityDetails) {
     parts.push('', `## Current Focus`, params.entityDetails);

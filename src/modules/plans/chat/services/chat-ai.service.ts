@@ -15,7 +15,10 @@ import {
   GENERATE_CHAT_NAME_PROMPT,
 } from '../prompts/chat';
 
-import { proposeSoulUpdateTool } from '../tools/propose-soul-update';
+import { proposePlanUpdateTool } from '../tools/propose-plan-update';
+import { searchChatsTool } from '../tools/search-chats';
+import { loadPhasesTool } from '../tools/load-phases';
+import { loadMilestonesTool } from '../tools/load-milestones';
 import { ChatContext, ChatContextType } from '../types/entity';
 
 const SOUL_CONTEXT_TYPES: ChatContextType[] = [
@@ -79,11 +82,27 @@ export type StreamChunkEvent = { type: 'chunk'; content: string };
 export type StreamProposalEvent = {
   type: 'proposal';
   toolCallId: string;
+  toolName: string;
   description: string;
+  args: Record<string, unknown>;
 };
-export type StreamEvent = StreamChunkEvent | StreamProposalEvent;
+export type StreamToolCallEvent = { type: 'tool_call'; name: string };
+export type StreamProposalProgressEvent = {
+  type: 'proposal_progress';
+  stage: 'analyzing' | 'generating_changes';
+};
+export type StreamEvent =
+  | StreamChunkEvent
+  | StreamProposalEvent
+  | StreamToolCallEvent
+  | StreamProposalProgressEvent;
 
-const MAX_TOOL_ROUNDS = 3;
+export type ToolExecutor = (
+  name: string,
+  args: Record<string, unknown>,
+) => Promise<string>;
+
+const MAX_TOOL_ROUNDS = 5;
 
 function extractTextContent(content: unknown): string | null {
   if (typeof content === 'string') return content || null;
@@ -129,9 +148,13 @@ export class ChatAiService {
     messages: ChatMessage[],
     soul: ProjectSoul,
     context: ChatContext | null,
+    toolExecutor: ToolExecutor,
   ): AsyncGenerator<StreamEvent> {
     const model = getModel('claude-sonnet-4-6', 0.7).bindTools([
-      proposeSoulUpdateTool,
+      proposePlanUpdateTool,
+      searchChatsTool,
+      loadPhasesTool,
+      loadMilestonesTool,
     ]);
 
     const entityDetails = context
@@ -182,11 +205,17 @@ export class ChatAiService {
       langchainMessages.push(new AIMessage(accumulated));
 
       for (const toolCall of toolCalls) {
-        if (toolCall.name === 'propose_soul_update') {
+        yield { type: 'tool_call', name: toolCall.name };
+
+        if (toolCall.name === 'propose_plan_update') {
+          yield { type: 'proposal_progress', stage: 'analyzing' };
+          yield { type: 'proposal_progress', stage: 'generating_changes' };
           yield {
             type: 'proposal',
             toolCallId: toolCall.id ?? '',
+            toolName: toolCall.name,
             description: toolCall.args.description as string,
+            args: toolCall.args as Record<string, unknown>,
           };
 
           langchainMessages.push(
@@ -194,6 +223,17 @@ export class ChatAiService {
               tool_call_id: toolCall.id ?? '',
               content:
                 'Proposal submitted for user review. Continue your response.',
+            }),
+          );
+        } else {
+          const result = await toolExecutor(
+            toolCall.name,
+            toolCall.args as Record<string, unknown>,
+          );
+          langchainMessages.push(
+            new ToolMessage({
+              tool_call_id: toolCall.id ?? '',
+              content: result,
             }),
           );
         }

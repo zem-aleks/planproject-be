@@ -25,6 +25,7 @@ import { mapProjectToEntity } from '../../projects/mappers/mapProjectToEntity';
 import { SupabaseStorageService } from '../../../supabase/supabase-storage.service';
 import {
   ChatStreamEvent,
+  ChatStreamToolCall,
   CREATE_CHAT_SCHEMA,
   CreateChatData,
   PendingProposal,
@@ -169,10 +170,32 @@ export class ChatController {
             res.write(`data: ${JSON.stringify(chunkEvent)}\n\n`);
             break;
           }
+          case 'tool_call': {
+            const toolCallEvent: ChatStreamToolCall = {
+              type: 'tool_call',
+              name: event.name,
+            };
+            res.write(`data: ${JSON.stringify(toolCallEvent)}\n\n`);
+            break;
+          }
+          case 'proposal_progress': {
+            const progressEvent: ChatStreamEvent = {
+              type: 'proposal_progress',
+              stage: event.stage,
+            };
+            res.write(`data: ${JSON.stringify(progressEvent)}\n\n`);
+            break;
+          }
           case 'proposal': {
+            const args = event.args;
             const proposal = this.chatService.buildProposal({
               description: event.description,
               toolCallId: event.toolCallId,
+              toolName: event.toolName,
+              changes: {
+                ...(args.soul ? { soul: args.soul as string } : {}),
+                ...(args.plan ? { plan: args.plan as string } : {}),
+              },
             });
             proposals.push(proposal);
             const confirmEvent: ChatStreamEvent = {
