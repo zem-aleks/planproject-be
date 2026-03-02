@@ -55,10 +55,9 @@ For each phase, provide a minimal and maximal time estimation in days, as well a
 Remember that the goal is to create a clear and actionable project plan that can be used for further planning and execution.
 `,
       ),
-      new HumanMessage(`Project title: ${project.title}
-Project description: ${project.description || 'no description'}
-Project idea summary: ${project.summary || 'no summary provided'}
-`),
+      new HumanMessage(
+        `Project soul:\n${JSON.stringify(project.soul, null, 2)}`,
+      ),
     ]);
   }
 

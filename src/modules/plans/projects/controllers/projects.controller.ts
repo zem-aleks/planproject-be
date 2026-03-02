@@ -40,6 +40,7 @@ import { SoulAiService } from '../services/soul-ai.service';
 import { SoulQueueService } from '../services/soul-queue.service';
 import { ShapingService } from '../../../shaping/services/shaping.service';
 import { notReachable } from '../../../../shared/utils/notReachable';
+import { PhasesService } from '../../phases/services/phases.service';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -54,6 +55,7 @@ export class ProjectsController {
     private readonly plansService: PlansService,
     private readonly storageService: SupabaseStorageService,
     private readonly membershipService: MembershipService,
+    private readonly phasesService: PhasesService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
@@ -125,6 +127,34 @@ export class ProjectsController {
       default:
         return notReachable(project.status);
     }
+  }
+
+  @Post(':projectId/build-plan')
+  async buildPlan(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (!project.soul) {
+      throw new BadRequestException('Project has no soul');
+    }
+
+    await this.phasesService.deleteForProject(project.id);
+
+    const phases = await this.phasesService.generateForProject(project);
+
+    const daysNeeded = Math.max(...phases.map((p) => p.timelineEndDay));
+
+    const updatedProject = await this.projectsService.update({
+      ...project,
+      status: 'analyzing',
+      daysNeeded,
+    });
+
+    return mapProjectToEntity(updatedProject, this.logoPath);
   }
 
   @Get()
