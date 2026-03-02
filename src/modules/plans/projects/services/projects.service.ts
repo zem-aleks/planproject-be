@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
@@ -9,6 +9,8 @@ import { SoulAiService } from './soul-ai.service';
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     @InjectRepository(Project)
     private readonly repository: Repository<Project>,
@@ -124,6 +126,10 @@ export class ProjectsService {
       });
       return { ...project, soul, status: 'soulDone' };
     } catch (error) {
+      this.logger.error(
+        `Failed to generate soul for project ${project.id}`,
+        error instanceof Error ? error.stack : error,
+      );
       await this.updatePartial(project.id, {
         status: 'soulError',
       });

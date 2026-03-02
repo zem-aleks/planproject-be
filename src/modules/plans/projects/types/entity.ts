@@ -148,36 +148,41 @@ export const PROJECT_SOUL_SCHEMA = z.object({
     }),
   ),
 
-  openQuestions: z.array(
-    z.object({
-      topic: z.string(),
-      context: z.string().nullable().describe('Why this needs deciding'),
-      status: z.enum(['discussed_unresolved', 'not_discussed']),
-      impact: z.enum(['blocking', 'important', 'minor']),
-      impactReason: z
-        .string()
-        .describe(
-          'One sentence: what gets stuck or degraded if this stays unresolved',
-        ),
-      suggestedOptions: z
-        .array(z.string())
-        .nullable()
-        .describe('2-3 concrete options if possible'),
-    }),
-  ),
+  openQuestions: z
+    .array(
+      z.object({
+        topic: z.string(),
+        context: z.string().nullable().describe('Why this needs deciding'),
+        status: z.enum(['discussed_unresolved', 'not_discussed']),
+        impact: z.enum(['blocking', 'important', 'minor']),
+        impactReason: z
+          .string()
+          .describe(
+            'One sentence: what gets stuck or degraded if this stays unresolved',
+          ),
+        suggestedOptions: z
+          .array(z.string())
+          .nullable()
+          .describe('2-3 concrete options if possible'),
+      }),
+    )
+    .default([]),
 
-  assumptions: z.array(
-    z.object({
-      assumption: z.string(),
-      reasoning: z.string(),
-      affectedAreas: z
-        .array(z.string())
-        .describe('Which workstreams, entities, or outcomes this touches'),
-    }),
-  ),
+  assumptions: z
+    .array(
+      z.object({
+        assumption: z.string(),
+        reasoning: z.string(),
+        affectedAreas: z
+          .array(z.string())
+          .describe('Which workstreams, entities, or outcomes this touches'),
+      }),
+    )
+    .default([]),
 
   domainContext: z
     .array(z.string())
+    .default([])
     .describe(
       'Domain-specific knowledge agents will need. Coding conventions for software, regulations for business, training principles for fitness, etc.',
     ),
