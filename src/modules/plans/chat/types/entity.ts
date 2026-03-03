@@ -11,6 +11,11 @@ export const CHAT_CONTEXT_TYPES = [
   'workstream',
   'assumption',
   'decision',
+  'desired_outcome',
+  'constraint',
+  'resource',
+  'target_user',
+  'project_context',
 ] as const;
 
 export type ChatContextType = (typeof CHAT_CONTEXT_TYPES)[number];
