@@ -201,6 +201,7 @@ export class ChatController {
             const confirmEvent: ChatStreamEvent = {
               type: 'confirm',
               proposalId: proposal.id,
+              toolName: event.toolName,
               description: proposal.description,
             };
             res.write(`data: ${JSON.stringify(confirmEvent)}\n\n`);

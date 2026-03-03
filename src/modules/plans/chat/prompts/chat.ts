@@ -52,6 +52,24 @@ Fill in only the sections that need changes:
 - Think about ripple effects: if phases change, do milestones need updating too? Describe everything in one proposal.
 - Continue your response naturally after the tool call — explain what you proposed and why.`;
 
+const GENERATE_PLAN_TOOL_GUIDELINES = `## Generate Plan Tool — \`generate_plan\`
+You have a tool to generate or regenerate the full project plan from scratch.
+
+### When to use
+- The user explicitly asks to generate, create, or build the plan.
+- The user asks to regenerate or redo the plan from scratch.
+- The project has a soul but NO phases exist yet.
+
+### When NOT to use
+- The user wants to make targeted changes to specific phases or milestones — use \`propose_plan_update\` instead.
+- The project has no soul yet — tell the user the soul must be generated first.
+
+### Behavior
+- Replaces all existing phases and milestones with newly generated ones.
+- Generates all phases at once. Milestones are generated asynchronously in the background after phases are created.
+- Project status changes to \`analyzing\` after generation.
+- After calling this tool, summarize for the user and let them know milestones are being generated.`;
+
 const LOOKUP_TOOL_GUIDELINES = `## Lookup Tools
 You have read-only tools to look up project data. Use them to give grounded, specific answers.
 
@@ -86,6 +104,8 @@ export function buildChatSystemPrompt(params: {
     GUIDELINES,
     '',
     PROPOSAL_TOOL_GUIDELINES,
+    '',
+    GENERATE_PLAN_TOOL_GUIDELINES,
     '',
     LOOKUP_TOOL_GUIDELINES,
   ];

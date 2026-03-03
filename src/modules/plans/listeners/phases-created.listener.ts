@@ -28,7 +28,7 @@ export class PhasesCreatedListener {
     }
 
     await this.milestonesService.deleteForProject(project.id);
-    phases.map(async (phase: Phase) => {
+    for (const phase of phases) {
       try {
         const { milestones } =
           await this.milestonesAiService.generatePhaseMilestones({
@@ -64,7 +64,7 @@ export class PhasesCreatedListener {
           status: 'error',
         });
       }
-    });
+    }
 
     // Solution to generate all milestones at once. Works slow, takes 1min
     // const { milestones } =

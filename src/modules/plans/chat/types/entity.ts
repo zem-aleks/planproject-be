@@ -98,6 +98,7 @@ export type ChatStreamChunk = { type: 'chunk'; content: string };
 export type ChatStreamConfirm = {
   type: 'confirm';
   proposalId: string;
+  toolName: string;
   description: string;
 };
 export type ChatStreamDone = {

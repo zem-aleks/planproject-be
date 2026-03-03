@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, Repository } from 'typeorm';
+import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -31,6 +31,7 @@ export class SoulQueueService {
     private readonly repository: Repository<Project>,
     @InjectRepository(ChatMessage)
     private readonly chatMessageRepository: Repository<ChatMessage>,
+    private readonly dataSource: DataSource,
     private readonly soulAiService: SoulAiService,
     private readonly phasesService: PhasesService,
     private readonly phasesAiService: PhasesAiService,
@@ -77,7 +78,8 @@ export class SoulQueueService {
 
     if (
       removed.type === 'apply_proposal' ||
-      removed.type === 'apply_plan_proposal'
+      removed.type === 'apply_plan_proposal' ||
+      removed.type === 'generate_plan'
     ) {
       await this.revertProposal(removed.messageId, removed.proposalId);
     }
@@ -98,6 +100,37 @@ export class SoulQueueService {
     await this.chatMessageRepository.save(message);
   }
 
+  async cancelQueue(project: Project): Promise<Project> {
+    if (project.soulQueue.length === 0 && !project.soulQueueApplying) {
+      throw new BadRequestException('Queue is already empty');
+    }
+
+    // Revert all proposal-type operations back to pending
+    for (const op of project.soulQueue) {
+      if (
+        op.type === 'apply_proposal' ||
+        op.type === 'apply_plan_proposal' ||
+        op.type === 'generate_plan'
+      ) {
+        await this.revertProposal(op.messageId, op.proposalId);
+      }
+    }
+
+    await this.dataSource
+      .createQueryBuilder()
+      .update(Project)
+      .set({
+        soulQueue: [],
+        soulQueueApplying: false,
+        soulQueueStartedAt: null,
+        soulQueueError: null,
+      })
+      .where('id = :id', { id: project.id })
+      .execute();
+
+    return this.repository.findOneByOrFail({ id: project.id });
+  }
+
   async applyQueue(project: Project): Promise<Project> {
     if (project.soulQueue.length === 0) {
       throw new BadRequestException('Queue is empty');
@@ -110,13 +143,17 @@ export class SoulQueueService {
     }
 
     project.soulQueueApplying = true;
+    project.soulQueueError = null;
     await this.repository.save(project);
+
+    const operationsToProcess = [...project.soulQueue];
+    const processedOpIds: string[] = [];
 
     try {
       const soul: ProjectSoul = JSON.parse(JSON.stringify(project.soul));
       const changeDescriptions: string[] = [];
 
-      for (const op of project.soulQueue) {
+      for (const op of operationsToProcess) {
         switch (op.type) {
           case 'answer_open_question': {
             const qIdx = soul.openQuestions.findIndex(
@@ -190,7 +227,36 @@ export class SoulQueueService {
             }
             break;
           }
+          case 'generate_plan': {
+            const generatedPhases =
+              await this.phasesAiService.summarizeProjectPhases(project);
+            await this.phasesService.deleteForProject(project.id);
+            const phases = await this.phasesService.createMany(
+              generatedPhases.projectPhases.map((phase) => ({
+                projectId: project.id,
+                title: phase.phaseTitle,
+                description: phase.phaseDescription,
+                minDaysNeeded: phase.minDaysNeeded,
+                maxDaysNeeded: phase.maxDaysNeeded,
+                expertiseNeeded: phase.expertiseNeeded,
+                timelineStartDay: phase.timelineStartDay,
+                timelineEndDay: phase.timelineEndDay,
+                status: 'building' as const,
+                startedAt: new Date(),
+                completedAt: null,
+              })),
+            );
+            this.eventEmitter.emit('phase.createdForProject', {
+              phases,
+              project,
+            });
+            const daysNeeded = Math.max(...phases.map((p) => p.timelineEndDay));
+            project.status = 'analyzing';
+            project.daysNeeded = daysNeeded;
+            break;
+          }
         }
+        processedOpIds.push(op.id);
       }
 
       let finalSoul: ProjectSoul;
@@ -208,15 +274,34 @@ export class SoulQueueService {
         finalSoul = soul;
       }
 
-      project.soul = finalSoul;
-      project.soulQueue = [];
-      project.soulQueueStartedAt = null;
-      project.soulQueueApplying = false;
+      return await this.dataSource.transaction(async (manager) => {
+        const freshProject = await manager.findOneByOrFail(Project, {
+          id: project.id,
+        });
 
-      return this.repository.save(project);
+        freshProject.soul = finalSoul;
+        freshProject.soulQueue = freshProject.soulQueue.filter(
+          (op) => !processedOpIds.includes(op.id),
+        );
+        freshProject.soulQueueApplying = false;
+        freshProject.soulQueueStartedAt =
+          freshProject.soulQueue.length > 0
+            ? freshProject.soulQueueStartedAt
+            : null;
+        freshProject.status = project.status;
+        freshProject.daysNeeded = project.daysNeeded;
+
+        return manager.save(Project, freshProject);
+      });
     } catch (error) {
-      project.soulQueueApplying = false;
-      await this.repository.save(project);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.dataSource
+        .createQueryBuilder()
+        .update(Project)
+        .set({ soulQueueApplying: false, soulQueueError: errorMessage })
+        .where('id = :id', { id: project.id })
+        .execute();
       throw error;
     }
   }
@@ -236,16 +321,42 @@ export class SoulQueueService {
         continue;
       }
 
+      if (project.soulQueueApplying) {
+        await this.recoverStuckQueue(project);
+        continue;
+      }
+
       try {
         await this.applyQueue(project);
         this.logger.log(`Auto-applied soul queue for project ${project.id}`);
       } catch (error) {
+        // soulQueueError is already persisted by applyQueue's catch block
         this.logger.error(
           `Failed to auto-apply soul queue for project ${project.id}`,
           error instanceof Error ? error.stack : error,
         );
       }
     }
+  }
+
+  private async recoverStuckQueue(project: Project): Promise<void> {
+    const stuckMinutes =
+      (Date.now() - new Date(project.updatedAt).getTime()) / 60_000;
+
+    if (stuckMinutes < 5) {
+      return;
+    }
+
+    this.logger.warn(
+      `Recovering stuck queue for project ${project.id} (stuck for ${Math.round(stuckMinutes)}m)`,
+    );
+
+    await this.dataSource
+      .createQueryBuilder()
+      .update(Project)
+      .set({ soulQueueApplying: false })
+      .where('id = :id', { id: project.id })
+      .execute();
   }
 
   private async applyPlanUpdate(project: Project, plan: string): Promise<void> {
@@ -396,6 +507,7 @@ export class SoulQueueService {
       }
       case 'apply_proposal':
       case 'apply_plan_proposal':
+      case 'generate_plan':
         break;
     }
   }
@@ -424,6 +536,7 @@ export class SoulQueueService {
           );
         case 'apply_proposal':
         case 'apply_plan_proposal':
+        case 'generate_plan':
           return false;
       }
     });

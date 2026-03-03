@@ -106,6 +106,7 @@ export class ProjectsService {
       soulQueue: [],
       soulQueueStartedAt: null,
       soulQueueApplying: false,
+      soulQueueError: null,
       activated: false,
     });
   }

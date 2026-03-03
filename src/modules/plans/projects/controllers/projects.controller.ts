@@ -273,6 +273,18 @@ export class ProjectsController {
     return mapProjectToEntity(updated, this.logoPath);
   }
 
+  @Post(':projectId/soul/queue/cancel')
+  async cancelSoulQueue(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const updated = await this.soulQueueService.cancelQueue(project);
+    return mapProjectToEntity(updated, this.logoPath);
+  }
+
   @Delete(':projectId')
   async deleteProject(
     @Param('projectId', ProjectByIdPipe) project: Project,

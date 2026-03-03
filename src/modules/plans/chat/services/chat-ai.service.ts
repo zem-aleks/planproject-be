@@ -19,6 +19,7 @@ import { proposePlanUpdateTool } from '../tools/propose-plan-update';
 import { searchChatsTool } from '../tools/search-chats';
 import { loadPhasesTool } from '../tools/load-phases';
 import { loadMilestonesTool } from '../tools/load-milestones';
+import { generatePlanTool } from '../tools/generate-plan';
 import { ChatContext, ChatContextType } from '../types/entity';
 
 const SOUL_CONTEXT_TYPES: ChatContextType[] = [
@@ -155,6 +156,7 @@ export class ChatAiService {
       searchChatsTool,
       loadPhasesTool,
       loadMilestonesTool,
+      generatePlanTool,
     ]);
 
     const entityDetails = context
@@ -223,6 +225,24 @@ export class ChatAiService {
               tool_call_id: toolCall.id ?? '',
               content:
                 'Proposal submitted for user review. Continue your response.',
+            }),
+          );
+        } else if (toolCall.name === 'generate_plan') {
+          yield { type: 'proposal_progress', stage: 'analyzing' };
+          yield { type: 'proposal_progress', stage: 'generating_changes' };
+          yield {
+            type: 'proposal',
+            toolCallId: toolCall.id ?? '',
+            toolName: toolCall.name,
+            description: 'Generate the full project plan from the project soul',
+            args: toolCall.args as Record<string, unknown>,
+          };
+
+          langchainMessages.push(
+            new ToolMessage({
+              tool_call_id: toolCall.id ?? '',
+              content:
+                'Plan generation proposal submitted for user review. Continue your response.',
             }),
           );
         } else {

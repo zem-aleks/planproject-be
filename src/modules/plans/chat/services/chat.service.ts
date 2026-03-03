@@ -11,7 +11,6 @@ import { ChatMessage } from '../entities/chat-message.entity';
 import { ChatAiService, StreamEvent, ToolExecutor } from './chat-ai.service';
 import { ProjectSoul } from '../../projects/types/entity';
 import { ChatContext, PendingProposal, ProposalChanges } from '../types/entity';
-import { ProjectsService } from '../../projects/services/projects.service';
 import { SoulQueueService } from '../../projects/services/soul-queue.service';
 import { Project } from '../../projects/entities/project.entity';
 import { PhasesService } from '../../phases/services/phases.service';
@@ -25,7 +24,6 @@ export class ChatService {
     @InjectRepository(ChatMessage)
     private readonly messageRepository: Repository<ChatMessage>,
     private readonly chatAiService: ChatAiService,
-    private readonly projectsService: ProjectsService,
     private readonly soulQueueService: SoulQueueService,
     private readonly phasesService: PhasesService,
     private readonly milestonesService: MilestonesService,
@@ -214,15 +212,25 @@ export class ChatService {
       throw new BadRequestException(`Proposal already ${proposal.status}`);
     }
 
+    const operation =
+      proposal.toolName === 'generate_plan'
+        ? {
+            type: 'generate_plan' as const,
+            description: proposal.description,
+            proposalId: params.proposalId,
+            messageId: message.id,
+          }
+        : {
+            type: 'apply_plan_proposal' as const,
+            description: proposal.description,
+            proposalId: params.proposalId,
+            messageId: message.id,
+            changes: proposal.changes ?? { soul: proposal.description },
+          };
+
     const updatedProject = await this.soulQueueService.addOperation(
       params.project,
-      {
-        type: 'apply_plan_proposal',
-        description: proposal.description,
-        proposalId: params.proposalId,
-        messageId: message.id,
-        changes: proposal.changes ?? { soul: proposal.description },
-      },
+      operation,
     );
 
     proposal.status = 'approved';

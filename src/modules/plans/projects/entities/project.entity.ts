@@ -46,6 +46,9 @@ export class Project {
   @Column({ type: 'boolean', default: false })
   soulQueueApplying: boolean;
 
+  @Column({ nullable: true, type: 'varchar', default: null })
+  soulQueueError: string | null;
+
   @Column({ nullable: true, type: 'varchar' })
   logoUrl: string | null;
 
