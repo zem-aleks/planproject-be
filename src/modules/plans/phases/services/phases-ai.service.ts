@@ -7,7 +7,11 @@ import { Phase } from '../entities/phase.entity';
 import { renderSoul } from '../../projects/helpers/renderSoul';
 
 const PHASE_OUTPUT_SCHEMA = z.object({
-  phaseTitle: z.string().describe('Title of the project phase'),
+  phaseTitle: z
+    .string()
+    .describe(
+      'Title of the project phase. No numbering prefixes like "1.", "Phase 1:", etc.',
+    ),
   phaseDescription: z.string().describe('Description of the project phase'),
   minDaysNeeded: z
     .number()
@@ -44,7 +48,8 @@ You need to transform all provided data into structured project plan with clear 
 The plan should be broken down into clear phases, each with its own title and description.
 For each phase, provide a minimal and maximal time estimation in days, as well as a short comma-separated list of expertise needed to complete the phase.
 Remember that the goal is to create a clear and actionable project plan that can be used for further planning and execution.
-You MUST call the provided tool with all required fields populated. Never return an empty object.`;
+You MUST call the provided tool with all required fields populated. Never return an empty object.
+Do NOT prefix phase titles with numbering like "1.", "Phase 1:", "Phase 1.", etc. The ordering is implicit in the array order.`;
 
 @Injectable()
 export class PhasesAiService {
@@ -56,7 +61,7 @@ export class PhasesAiService {
       new HumanMessage(`Project soul:\n${renderSoul(project.soul!)}`),
     ];
 
-    const model = getModel('gpt-4.1', 0.5);
+    const model = getModel('gpt-5-mini', 0.5);
     const structuredModel = model.withStructuredOutput(PHASES_SCHEMA, {
       name: 'GenerateProjectPhases',
       includeRaw: true,

@@ -85,10 +85,46 @@ You have read-only tools to look up project data. Use them to give grounded, spe
 - Use when the user asks about milestones, deliverables, specific progress, or definition of done.
 - Pass a \`phaseId\` if the user is focused on a specific phase; omit to get all milestones.
 
+### \`load_chats\` — list all project chats
+- Use when you need to find past conversations that might contain relevant context.
+- Returns chat names, context types, and creation dates with IDs.
+
+### \`load_chat_messages\` — load full chat conversation
+- Use after \`load_chats\` to read a specific conversation's full message history.
+- Use when the user references a past discussion, or when you need deeper context about a topic that was discussed in another chat.
+- Prefer this over \`search_chats\` when you need the full flow of a conversation, not just keyword matches.
+
 ### When to use lookup tools
 - **Prefer looking up** over guessing. If the user asks about phases or milestones and you don't have the data in the conversation yet, call the tool.
 - **Don't over-fetch.** If the conversation already contains the data the user is asking about, just reference it.
 - You can call multiple tools in a single turn if needed (e.g., load phases + load milestones).`;
+
+const SECTION_UNLOCK_TOOL_GUIDELINES = `## Section Unlock & Data Tools
+
+### \`unlock_section\` — unlock competitors or auditory analysis
+- Use when the user asks to analyze competitors, explore the market/audience, or explicitly asks to unlock one of these sections.
+- Sections: \`competitors\` (competitive landscape) and \`auditory\` (audience/market analysis).
+- Unlocking triggers AI generation automatically — tell the user data is being generated.
+- Only unlock when the user clearly wants this analysis. Don't unlock proactively.
+
+### \`load_competitors\` — load competitor data
+- Use when the user asks about competitors, competitive landscape, or market positioning.
+- Returns all competitors with ratings, descriptions, USPs, and URLs.
+- The section must be unlocked first — if not, tell the user and offer to unlock it.
+
+### \`load_auditory\` — load audience/market analysis
+- Use when the user asks about target audience, market sizing (TAM/SAM/SOM), or audience pain points.
+- Returns market sizing, demands, pains, differentiation, and channels.
+- The section must be unlocked first — if not, tell the user and offer to unlock it.
+
+### \`update_competitors\` — update a competitor field
+- Use when the user wants to correct or modify competitor information.
+- Always load competitors first to get the competitor ID.
+- Updates one field at a time.
+
+### \`update_auditory\` — update an auditory field
+- Use when the user wants to correct or modify audience analysis information.
+- Updates one field at a time (tam, sam, som, auditoryDemands, auditoryPains, differentiation, auditoryChannels).`;
 
 export function buildChatSystemPrompt(params: {
   soul: string;
@@ -108,6 +144,8 @@ export function buildChatSystemPrompt(params: {
     GENERATE_PLAN_TOOL_GUIDELINES,
     '',
     LOOKUP_TOOL_GUIDELINES,
+    '',
+    SECTION_UNLOCK_TOOL_GUIDELINES,
   ];
 
   if (params.entityDetails) {

@@ -112,11 +112,16 @@ export type ChatStreamProposalProgress = {
   type: 'proposal_progress';
   stage: 'analyzing' | 'generating_changes';
 };
+export type ChatStreamSectionUnlocked = {
+  type: 'section_unlocked';
+  section: 'competitors' | 'auditory';
+};
 export type ChatStreamEvent =
   | ChatStreamChunk
   | ChatStreamConfirm
   | ChatStreamToolCall
   | ChatStreamProposalProgress
+  | ChatStreamSectionUnlocked
   | ChatStreamDone
   | ChatStreamError;
 

@@ -35,7 +35,7 @@ export class Milestone {
   @Column({ nullable: false, type: 'varchar' })
   definitionOfDone: string;
 
-  @Column({ nullable: false, type: 'int' })
+  @Column({ nullable: false, type: 'real' })
   daysNeeded: number;
 
   @Column({ nullable: false, type: 'int' })

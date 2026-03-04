@@ -25,6 +25,7 @@ import { mapProjectToEntity } from '../../projects/mappers/mapProjectToEntity';
 import { SupabaseStorageService } from '../../../supabase/supabase-storage.service';
 import {
   ChatStreamEvent,
+  ChatStreamSectionUnlocked,
   ChatStreamToolCall,
   CREATE_CHAT_SCHEMA,
   CreateChatData,
@@ -155,6 +156,7 @@ export class ChatController {
         chat,
         message: data.message,
         soul: project.soul,
+        project,
       });
 
       for await (const event of stream) {
@@ -205,6 +207,14 @@ export class ChatController {
               description: proposal.description,
             };
             res.write(`data: ${JSON.stringify(confirmEvent)}\n\n`);
+            break;
+          }
+          case 'section_unlocked': {
+            const sectionEvent: ChatStreamSectionUnlocked = {
+              type: 'section_unlocked',
+              section: event.section,
+            };
+            res.write(`data: ${JSON.stringify(sectionEvent)}\n\n`);
             break;
           }
         }

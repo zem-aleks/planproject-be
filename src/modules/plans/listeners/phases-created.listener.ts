@@ -28,8 +28,9 @@ export class PhasesCreatedListener {
     }
 
     await this.milestonesService.deleteForProject(project.id);
-    for (const phase of phases) {
-      try {
+
+    const results = await Promise.allSettled(
+      phases.map(async (phase) => {
         const { milestones } =
           await this.milestonesAiService.generatePhaseMilestones({
             phase,
@@ -55,38 +56,31 @@ export class PhasesCreatedListener {
           })),
         );
 
-        await this.phasesService.updatePartial(phase.id, {
-          status: 'notStarted',
-        });
-      } catch (e) {
-        console.error(e);
-        await this.phasesService.updatePartial(phase.id, {
-          status: 'error',
-        });
-      }
-    }
+        return phase.id;
+      }),
+    );
 
-    // Solution to generate all milestones at once. Works slow, takes 1min
-    // const { milestones } =
-    //   await this.milestonesAiService.generateProjectMilestones({
-    //     project,
-    //     phases,
-    //   });
-    //
-    // await this.milestonesService.createMany(
-    //   milestones.map((milestone) => ({
-    //     ...milestone,
-    //     projectId: project.id,
-    //     userId: project.userId as string,
-    //     status: 'notStarted',
-    //     startedAt: new Date(),
-    //     completeMessage: null,
-    //     completedAt: null,
-    //   })),
-    // );
-    // await this.phasesService.updateByProjectPartial(project.id, {
-    //   status: 'notStarted',
-    // });
+    const succeededIds = results
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => r.value);
+    const failedIds = results
+      .filter((r) => r.status === 'rejected')
+      .map((_, i) => phases[i].id);
+
+    results
+      .filter((r) => r.status === 'rejected')
+      .forEach((r) => console.error(r.reason));
+
+    if (succeededIds.length > 0) {
+      await this.phasesService.updateManyPartial(succeededIds, {
+        status: 'notStarted',
+      });
+    }
+    if (failedIds.length > 0) {
+      await this.phasesService.updateManyPartial(failedIds, {
+        status: 'error',
+      });
+    }
   }
 
   @OnEvent('phase.updatedForProject')

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { CompetitorsService } from './services/competitors.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CompetitorsController } from './controllers/competitors.controller';
@@ -9,13 +9,17 @@ import { PlansModule } from '../plans/plans.module';
 import { ProjectAnalyzingStartedListener } from './listeners/project-analyzing-started.listener';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Competitor]), UsersModule, PlansModule],
+  imports: [
+    TypeOrmModule.forFeature([Competitor]),
+    UsersModule,
+    forwardRef(() => PlansModule),
+  ],
   controllers: [CompetitorsController],
   providers: [
     CompetitorsService,
     CompetitorsAiService,
     ProjectAnalyzingStartedListener,
   ],
-  exports: [],
+  exports: [CompetitorsService],
 })
 export class CompetitorsModule {}

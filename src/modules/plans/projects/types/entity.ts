@@ -9,6 +9,8 @@ export type ProjectPreviewEntity = {
   daysNeeded: number | null;
   startedAt: Date;
   activated: boolean;
+  competitorsUnlocked: boolean;
+  auditoryUnlocked: boolean;
   soul: ProjectSoul | null;
   soulQueue: SoulOperation[];
   soulQueueStartedAt: Date | null;
@@ -30,6 +32,8 @@ export type ProjectEntity = {
   completedAt: Date | null;
   status: ProjectStatus;
   activated: boolean;
+  competitorsUnlocked: boolean;
+  auditoryUnlocked: boolean;
   soul: ProjectSoul | null;
   soulQueue: SoulOperation[];
   soulQueueStartedAt: Date | null;

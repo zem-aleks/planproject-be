@@ -108,6 +108,8 @@ export class ProjectsService {
       soulQueueApplying: false,
       soulQueueError: null,
       activated: false,
+      competitorsUnlocked: false,
+      auditoryUnlocked: false,
     });
   }
 

@@ -20,6 +20,13 @@ import { searchChatsTool } from '../tools/search-chats';
 import { loadPhasesTool } from '../tools/load-phases';
 import { loadMilestonesTool } from '../tools/load-milestones';
 import { generatePlanTool } from '../tools/generate-plan';
+import { loadChatsTool } from '../tools/load-chats';
+import { loadChatMessagesTool } from '../tools/load-chat-messages';
+import { unlockSectionTool } from '../tools/unlock-section';
+import { loadCompetitorsTool } from '../tools/load-competitors';
+import { loadAuditoryTool } from '../tools/load-auditory';
+import { updateCompetitorsTool } from '../tools/update-competitors';
+import { updateAuditoryTool } from '../tools/update-auditory';
 import { ChatContext, ChatContextType } from '../types/entity';
 
 const SOUL_CONTEXT_TYPES: ChatContextType[] = [
@@ -92,11 +99,16 @@ export type StreamProposalProgressEvent = {
   type: 'proposal_progress';
   stage: 'analyzing' | 'generating_changes';
 };
+export type StreamSectionUnlockedEvent = {
+  type: 'section_unlocked';
+  section: 'competitors' | 'auditory';
+};
 export type StreamEvent =
   | StreamChunkEvent
   | StreamProposalEvent
   | StreamToolCallEvent
-  | StreamProposalProgressEvent;
+  | StreamProposalProgressEvent
+  | StreamSectionUnlockedEvent;
 
 export type ToolExecutor = (
   name: string,
@@ -157,6 +169,13 @@ export class ChatAiService {
       loadPhasesTool,
       loadMilestonesTool,
       generatePlanTool,
+      loadChatsTool,
+      loadChatMessagesTool,
+      unlockSectionTool,
+      loadCompetitorsTool,
+      loadAuditoryTool,
+      updateCompetitorsTool,
+      updateAuditoryTool,
     ]);
 
     const entityDetails = context
@@ -250,6 +269,14 @@ export class ChatAiService {
             toolCall.name,
             toolCall.args as Record<string, unknown>,
           );
+
+          if (toolCall.name === 'unlock_section') {
+            yield {
+              type: 'section_unlocked' as const,
+              section: toolCall.args.section as 'competitors' | 'auditory',
+            };
+          }
+
           langchainMessages.push(
             new ToolMessage({
               tool_call_id: toolCall.id ?? '',

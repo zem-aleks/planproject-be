@@ -28,6 +28,10 @@ export class CompetitorsService {
     return this.repository.save(data);
   }
 
+  async updatePartial(id: string, data: Partial<Competitor>) {
+    return this.repository.update(id, data);
+  }
+
   async generateForProject(project: Project): Promise<Competitor[]> {
     const competitorsData =
       await this.competitorsAiService.generateCompetitorsContent({ project });

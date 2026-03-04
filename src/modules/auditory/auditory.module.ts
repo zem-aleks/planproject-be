@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuditoryService } from './services/auditory.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditoryController } from './controllers/auditory.controller';
@@ -9,13 +9,17 @@ import { PlansModule } from '../plans/plans.module';
 import { ProjectAnalyzingStartedListener } from './listeners/project-analyzing-started.listener';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Auditory]), UsersModule, PlansModule],
+  imports: [
+    TypeOrmModule.forFeature([Auditory]),
+    UsersModule,
+    forwardRef(() => PlansModule),
+  ],
   controllers: [AuditoryController],
   providers: [
     AuditoryService,
     AuditoryAiService,
     ProjectAnalyzingStartedListener,
   ],
-  exports: [],
+  exports: [AuditoryService],
 })
 export class AuditoryModule {}

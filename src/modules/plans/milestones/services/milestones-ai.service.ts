@@ -6,6 +6,7 @@ import { Phase } from '../../phases/entities/phase.entity';
 import { Project } from '../../projects/entities/project.entity';
 import { Milestone } from '../entities/milestone.entity';
 import { renderSoul } from '../../projects/helpers/renderSoul';
+import { renderPhases } from '../../phases/helpers/renderPhases';
 
 const MILESTONE_STEP_SCHEMA = z.object({
   title: z.string().describe('Short actionable title of the step'),
@@ -48,7 +49,7 @@ export class MilestonesAiService {
     phases: Phase[];
     project: Project;
   }) {
-    const model = getModel('gpt-4.1', 0.5);
+    const model = getModel('gpt-5-mini', 0.5);
     const structuredModel = model.withStructuredOutput(
       z.object({
         milestones: z
@@ -65,17 +66,14 @@ export class MilestonesAiService {
 Project soul:
 ${renderSoul(project.soul!)}
 
-Here's a list of all project phases in JSON format:
-${JSON.stringify(phases, null, 2)}
+## All Project Phases
+${renderPhases(phases)}
 
-User is currently working on the phase: ${phase.title}.
-Phase ID: ${phase.id}
-Phase description: ${phase.description || 'no description'}
-Minimal time estimation in days: ${phase.minDaysNeeded}
-Maximal time estimation in days: ${phase.maxDaysNeeded}
-Expertise needed to complete this phase: ${phase.expertiseNeeded}
-Timeline start day: ${phase.timelineStartDay}
-Timeline end day: ${phase.timelineEndDay}
+## Current Phase: ${phase.title} (id: ${phase.id})
+${phase.description || 'No description'}
+- Days needed: ${phase.minDaysNeeded}–${phase.maxDaysNeeded}
+- Expertise: ${phase.expertiseNeeded}
+- Timeline: day ${phase.timelineStartDay} → day ${phase.timelineEndDay}
 
 Your task is to generate a list of milestones for this phase.
 A milestone is a significant point or event in a project.
@@ -136,8 +134,8 @@ add steps that are needed to organize proper team collaboration.
 Project soul:
 ${renderSoul(project.soul!)}
 
-Here's a list of all project phases in JSON format:
-${JSON.stringify(phases, null, 2)}
+## Project Phases
+${renderPhases(phases, { includeStatus: true })}
 
 Your goal is to generate a list of milestones for phases that have "building" status only.
 A milestone is a significant point or event in a project.

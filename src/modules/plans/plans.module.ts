@@ -31,6 +31,8 @@ import { ChatMessage } from './chat/entities/chat-message.entity';
 import { ChatController } from './chat/controllers/chat.controller';
 import { ChatService } from './chat/services/chat.service';
 import { ChatAiService } from './chat/services/chat-ai.service';
+import { CompetitorsModule } from '../competitors/competitors.module';
+import { AuditoryModule } from '../auditory/auditory.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { ChatAiService } from './chat/services/chat-ai.service';
     SupabaseModule,
     forwardRef(() => SubscriptionsModule),
     forwardRef(() => ShapingModule),
+    forwardRef(() => CompetitorsModule),
+    forwardRef(() => AuditoryModule),
   ],
   controllers: [
     ProjectsController,

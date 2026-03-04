@@ -22,7 +22,7 @@ export class Project {
   @Column({ nullable: false, type: 'varchar' })
   shapingId: string;
 
-  @Column({ nullable: true, type: 'int' })
+  @Column({ nullable: true, type: 'real' })
   daysNeeded: number | null;
 
   @Column({ nullable: false })
@@ -57,6 +57,12 @@ export class Project {
 
   @Column({ nullable: false, type: 'boolean', default: false })
   activated: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  competitorsUnlocked: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  auditoryUnlocked: boolean;
 
   @Column({
     name: 'startedAt',
