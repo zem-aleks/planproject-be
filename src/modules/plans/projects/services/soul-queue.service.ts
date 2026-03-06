@@ -291,7 +291,16 @@ export class SoulQueueService {
         freshProject.status = project.status;
         freshProject.daysNeeded = project.daysNeeded;
 
-        return manager.save(Project, freshProject);
+        const saved = await manager.save(Project, freshProject);
+
+        if (changeDescriptions.length > 0) {
+          this.eventEmitter.emit('soul.updated', {
+            projectId: project.id,
+            description: changeDescriptions.join(' '),
+          });
+        }
+
+        return saved;
       });
     } catch (error) {
       const errorMessage =

@@ -21,6 +21,7 @@ import { CompetitorsService } from '../../../competitors/services/competitors.se
 import { AuditoryService } from '../../../auditory/services/auditory.service';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { getProjectDay } from '../../projects/helpers/getProjectDay';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class ChatService {
@@ -39,6 +40,7 @@ export class ChatService {
     private readonly competitorsService: CompetitorsService,
     private readonly auditoryService: AuditoryService,
     private readonly tasksService: TasksService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getAllByProjectId(params: {
@@ -78,6 +80,15 @@ export class ChatService {
       context: params.context ?? null,
     });
     chat.messages = [];
+
+    this.eventEmitter.emit('chat.created', {
+      projectId: params.projectId,
+      chatId: chat.id,
+      chatName: null,
+      contextType: params.context?.type ?? null,
+      contextLabel: params.context?.label ?? null,
+    });
+
     return chat;
   }
 
@@ -432,6 +443,11 @@ export class ChatService {
           }
           await this.milestonesService.clearFocus(projectId);
           await this.milestonesService.setFocus(milestoneIds);
+          this.eventEmitter.emit('focus.changed', {
+            projectId,
+            milestoneIds,
+            milestoneTitles: milestones.map((m) => m.title),
+          });
           return `Focus switched to: ${milestones.map((m) => `"${m.title}"`).join(', ')}.`;
         }
         case 'toggle_focus': {
@@ -443,19 +459,28 @@ export class ChatService {
           if (milestone.focused) {
             milestone.focused = false;
             await this.milestonesService.update(milestone);
-            return `Removed focus from "${milestone.title}".`;
+          } else {
+            if (milestone.status === 'completed') {
+              return `Cannot focus completed milestone "${milestone.title}".`;
+            }
+            if (milestone.status === 'notStarted') {
+              const projectDay = getProjectDay(project);
+              await this.milestonesService.activate(milestone, projectDay);
+            }
+            milestone.focused = true;
+            await this.milestonesService.update(milestone);
           }
 
-          if (milestone.status === 'completed') {
-            return `Cannot focus completed milestone "${milestone.title}".`;
-          }
-          if (milestone.status === 'notStarted') {
-            const projectDay = getProjectDay(project);
-            await this.milestonesService.activate(milestone, projectDay);
-          }
-          milestone.focused = true;
-          await this.milestonesService.update(milestone);
-          return `Added focus to "${milestone.title}".`;
+          const focused =
+            await this.milestonesService.getFocusedMilestones(projectId);
+          this.eventEmitter.emit('focus.changed', {
+            projectId,
+            milestoneIds: focused.map((m) => m.id),
+            milestoneTitles: focused.map((m) => m.title),
+          });
+          return milestone.focused
+            ? `Added focus to "${milestone.title}".`
+            : `Removed focus from "${milestone.title}".`;
         }
         default:
           return `Unknown tool: ${name}`;

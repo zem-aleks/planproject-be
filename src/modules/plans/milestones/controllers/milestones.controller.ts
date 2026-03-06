@@ -38,6 +38,7 @@ import { MilestoneDetailsEntity } from '../types/entity';
 import { getProjectDay } from '../../projects/helpers/getProjectDay';
 import { User } from '../../../users/entities/user.entity';
 import { PlansService } from '../../services/plans.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -49,6 +50,7 @@ export class MilestonesController {
     private readonly projectsService: ProjectsService,
     private readonly tasksService: TasksService,
     private readonly plansService: PlansService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private async ensureProjectActive(project: Project) {
@@ -409,6 +411,13 @@ export class MilestonesController {
     const focused = await this.milestonesService.getFocusedMilestones(
       project.id,
     );
+
+    this.eventEmitter.emit('focus.changed', {
+      projectId: project.id,
+      milestoneIds: focused.map((m) => m.id),
+      milestoneTitles: focused.map((m) => m.title),
+    });
+
     return focused.map(mapMilestoneToEntity);
   }
 }

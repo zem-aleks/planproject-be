@@ -124,6 +124,7 @@ export class TasksService {
 
     this.eventEmitter.emit('task.completed', {
       taskId: task.id,
+      taskTitle: task.title,
       milestoneId: task.milestoneId,
       projectId: task.projectId,
       message,
