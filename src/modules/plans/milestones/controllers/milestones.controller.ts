@@ -19,6 +19,7 @@ import { mapMilestoneToEntity } from '../mappers/mapMilestoneToEntity';
 import { MilestonesService } from '../services/milestones.service';
 import { PhasesService } from '../../phases/services/phases.service';
 import { ProjectsService } from '../../projects/services/projects.service';
+import { Project } from '../../projects/entities/project.entity';
 import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import { MilestonesAiService } from '../services/milestones-ai.service';
 import {
@@ -36,6 +37,7 @@ import { UserPipe } from '../../../users/pipes/user.pipe';
 import { MilestoneDetailsEntity } from '../types/entity';
 import { getProjectDay } from '../../projects/helpers/getProjectDay';
 import { User } from '../../../users/entities/user.entity';
+import { PlansService } from '../../services/plans.service';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -46,7 +48,18 @@ export class MilestonesController {
     private readonly phasesService: PhasesService,
     private readonly projectsService: ProjectsService,
     private readonly tasksService: TasksService,
+    private readonly plansService: PlansService,
   ) {}
+
+  private async ensureProjectActive(project: Project) {
+    if (project.status !== 'active') {
+      await this.projectsService.activate(project.id, getProjectDay(project));
+      const updatedProject = await this.projectsService.getOneByIdOrThrow(
+        project.id,
+      );
+      await this.plansService.activateNextMilestone(updatedProject);
+    }
+  }
 
   @Get('phase/:phaseId')
   async getMilestones(
@@ -289,6 +302,8 @@ export class MilestonesController {
       throw new UnauthorizedException('Permissions denied');
     }
 
+    await this.ensureProjectActive(project);
+
     const stepIndex = milestone.steps.findIndex((s) => s.id === stepId);
     if (stepIndex === -1) {
       throw new NotFoundException('Step not found');
@@ -331,6 +346,8 @@ export class MilestonesController {
     if (project.userId !== user.id) {
       throw new UnauthorizedException('Permissions denied');
     }
+
+    await this.ensureProjectActive(project);
 
     if (milestone.status === 'completed') {
       throw new BadRequestException('Milestone already completed');
