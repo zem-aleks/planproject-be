@@ -135,6 +135,7 @@ export class MilestonesController {
         completeMessage: null,
         completedAt: null,
         context: null,
+        focused: false,
       })),
     );
 
@@ -237,6 +238,7 @@ export class MilestonesController {
           completeMessage: null,
           completedAt: null,
           context: null,
+          focused: false,
         };
       }),
     );
@@ -369,5 +371,44 @@ export class MilestonesController {
     }
 
     return mapMilestoneToEntity(completedMilestone);
+  }
+
+  @Patch(':milestoneId/toggle-focus')
+  async toggleFocus(
+    @Param('milestoneId', ParseUUIDPipe) milestoneId: string,
+    @AuthUser() user: User,
+  ) {
+    const milestone =
+      await this.milestonesService.getOneByIdOtThrow(milestoneId);
+    const project = await this.projectsService.getOneByIdOrThrow(
+      milestone.projectId,
+    );
+
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (milestone.focused) {
+      milestone.focused = false;
+      await this.milestonesService.update(milestone);
+    } else {
+      if (milestone.status === 'completed') {
+        throw new BadRequestException('Cannot focus a completed milestone');
+      }
+
+      if (milestone.status === 'notStarted') {
+        const projectDay = getProjectDay(project);
+        await this.ensureProjectActive(project);
+        await this.milestonesService.activate(milestone, projectDay);
+      }
+
+      milestone.focused = true;
+      await this.milestonesService.update(milestone);
+    }
+
+    const focused = await this.milestonesService.getFocusedMilestones(
+      project.id,
+    );
+    return focused.map(mapMilestoneToEntity);
   }
 }

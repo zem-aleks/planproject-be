@@ -477,6 +477,7 @@ export class SoulQueueService {
             completeMessage: null,
             completedAt: null,
             context: null,
+            focused: false,
           };
         }),
       );

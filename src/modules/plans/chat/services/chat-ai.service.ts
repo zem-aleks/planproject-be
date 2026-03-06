@@ -35,6 +35,8 @@ import { updateMilestoneTool } from '../tools/update-milestone';
 import { updateStepTool } from '../tools/update-step';
 import { updateTaskTool } from '../tools/update-task';
 import { loadTasksTool } from '../tools/load-tasks';
+import { switchFocusTool } from '../tools/switch-focus';
+import { toggleFocusTool } from '../tools/toggle-focus';
 import { ChatContext, ChatContextType } from '../types/entity';
 
 const SOUL_CONTEXT_TYPES: ChatContextType[] = [
@@ -192,6 +194,8 @@ export class ChatAiService {
       updateStepTool,
       updateTaskTool,
       loadTasksTool,
+      switchFocusTool,
+      toggleFocusTool,
     ]);
 
     const entityDetails =

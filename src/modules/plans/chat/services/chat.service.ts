@@ -139,7 +139,7 @@ export class ChatService {
           return milestones
             .map((m) => {
               const lines = [
-                `- **${m.title}** (id: ${m.id}, ${m.status}) — ${m.description}. Definition of done: ${m.definitionOfDone}. ~${m.daysNeeded} days.`,
+                `- **${m.title}** (id: ${m.id}, ${m.status}${m.focused ? ', focused' : ''}) — ${m.description}. Definition of done: ${m.definitionOfDone}. ~${m.daysNeeded} days.`,
               ];
               if (m.context) {
                 lines.push(`  Context: ${m.context}`);
@@ -407,6 +407,55 @@ export class ChatService {
           task[field] = value;
           await this.tasksService.update(task);
           return `Task ${field} updated successfully.`;
+        }
+        case 'switch_focus': {
+          const milestoneIds = args.milestoneIds as string[];
+          const milestones =
+            await this.milestonesService.getByIds(milestoneIds);
+          const missing = milestoneIds.filter(
+            (id) => !milestones.find((m) => m.id === id),
+          );
+          if (missing.length > 0) {
+            return `Milestones not found: ${missing.join(', ')}`;
+          }
+          const completed = milestones.filter((m) => m.status === 'completed');
+
+          if (completed.length > 0) {
+            return `Cannot focus completed milestones: ${completed.map((m) => `"${m.title}"`).join(', ')}`;
+          }
+          // Auto-activate notStarted milestones
+          const projectDay = getProjectDay(project);
+          for (const m of milestones) {
+            if (m.status === 'notStarted') {
+              await this.milestonesService.activate(m, projectDay);
+            }
+          }
+          await this.milestonesService.clearFocus(projectId);
+          await this.milestonesService.setFocus(milestoneIds);
+          return `Focus switched to: ${milestones.map((m) => `"${m.title}"`).join(', ')}.`;
+        }
+        case 'toggle_focus': {
+          const milestoneId = args.milestoneId as string;
+          const milestone =
+            await this.milestonesService.getOneById(milestoneId);
+          if (!milestone) return `Milestone not found: ${milestoneId}`;
+
+          if (milestone.focused) {
+            milestone.focused = false;
+            await this.milestonesService.update(milestone);
+            return `Removed focus from "${milestone.title}".`;
+          }
+
+          if (milestone.status === 'completed') {
+            return `Cannot focus completed milestone "${milestone.title}".`;
+          }
+          if (milestone.status === 'notStarted') {
+            const projectDay = getProjectDay(project);
+            await this.milestonesService.activate(milestone, projectDay);
+          }
+          milestone.focused = true;
+          await this.milestonesService.update(milestone);
+          return `Added focus to "${milestone.title}".`;
         }
         default:
           return `Unknown tool: ${name}`;

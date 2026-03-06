@@ -54,6 +54,7 @@ export class PhasesCreatedListener {
             completeMessage: null,
             completedAt: null,
             context: null,
+            focused: false,
           })),
         );
 
@@ -123,6 +124,7 @@ export class PhasesCreatedListener {
           completeMessage: null,
           completedAt: null,
           context: null,
+          focused: false,
         })),
       );
       await this.phasesService.updateManyPartial(

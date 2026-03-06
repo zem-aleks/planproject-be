@@ -160,6 +160,19 @@ You have tools to complete and update milestones, steps, and tasks directly.
 - Fields: \`title\`, \`description\`, \`definitionOfDone\`, \`usefulResources\`, \`examples\`.
 - Load tasks first to get the task ID.
 
+### \`toggle_focus\` — add/remove a single milestone from focus
+- Use when the user wants to add or remove one milestone from their focus without affecting others.
+- If already focused → unfocuses it. If not focused → focuses it.
+- Auto-activates not-started milestones. Only completed milestones cannot be focused.
+- Prefer this over \`switch_focus\` for single milestone changes.
+
+### \`switch_focus\` — replace all focus
+- Use when the user wants to completely change what they're working on.
+- Clears all current focus and sets focus to the given milestones only.
+- Use for "I want to work on X and Y instead" (replacing everything).
+- Not-started milestones are automatically activated when focused.
+- Only completed milestones cannot be focused.
+
 ### Milestone context best practices
 - Context is a tiny glanceable note — MAX 3 bullet points.
 - Only record: active blockers, decisions that change approach, critical next step.
