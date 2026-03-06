@@ -13,6 +13,7 @@ import { renderSoul } from '../../projects/helpers/renderSoul';
 import {
   buildChatSystemPrompt,
   GENERATE_CHAT_NAME_PROMPT,
+  GENERATE_MILESTONE_CONTEXT_PROMPT,
 } from '../prompts/chat';
 
 import { proposePlanUpdateTool } from '../tools/propose-plan-update';
@@ -27,6 +28,13 @@ import { loadCompetitorsTool } from '../tools/load-competitors';
 import { loadAuditoryTool } from '../tools/load-auditory';
 import { updateCompetitorsTool } from '../tools/update-competitors';
 import { updateAuditoryTool } from '../tools/update-auditory';
+import { completeStepTool } from '../tools/complete-step';
+import { completeMilestoneTool } from '../tools/complete-milestone';
+import { completeTaskTool } from '../tools/complete-task';
+import { updateMilestoneTool } from '../tools/update-milestone';
+import { updateStepTool } from '../tools/update-step';
+import { updateTaskTool } from '../tools/update-task';
+import { loadTasksTool } from '../tools/load-tasks';
 import { ChatContext, ChatContextType } from '../types/entity';
 
 const SOUL_CONTEXT_TYPES: ChatContextType[] = [
@@ -162,6 +170,7 @@ export class ChatAiService {
     soul: ProjectSoul,
     context: ChatContext | null,
     toolExecutor: ToolExecutor,
+    preResolvedEntityDetails?: string,
   ): AsyncGenerator<StreamEvent> {
     const model = getModel('claude-sonnet-4-6', 0.7).bindTools([
       proposePlanUpdateTool,
@@ -176,11 +185,18 @@ export class ChatAiService {
       loadAuditoryTool,
       updateCompetitorsTool,
       updateAuditoryTool,
+      completeStepTool,
+      completeMilestoneTool,
+      completeTaskTool,
+      updateMilestoneTool,
+      updateStepTool,
+      updateTaskTool,
+      loadTasksTool,
     ]);
 
-    const entityDetails = context
-      ? extractSoulEntityDetails(soul, context)
-      : undefined;
+    const entityDetails =
+      preResolvedEntityDetails ??
+      (context ? extractSoulEntityDetails(soul, context) : undefined);
 
     const systemPrompt = buildChatSystemPrompt({
       soul: renderSoul(soul),
@@ -286,6 +302,37 @@ export class ChatAiService {
         }
       }
     }
+  }
+
+  async generateMilestoneContext(params: {
+    messages: ChatMessage[];
+    milestoneTitle: string;
+    milestoneDescription: string;
+    currentContext: string | null;
+  }): Promise<string> {
+    const model = getModel('gpt-4.1-nano', 0.7);
+
+    const userMessage = [
+      `## Milestone: ${params.milestoneTitle}`,
+      `Description: ${params.milestoneDescription}`,
+      '',
+      params.currentContext
+        ? `## Existing Context\n${params.currentContext}`
+        : '## Existing Context\nNone yet.',
+      '',
+      '## Recent Conversation',
+      ...params.messages
+        .slice(-10)
+        .map((msg) => `[${msg.role}]: ${msg.content}`),
+    ].join('\n');
+
+    const langchainMessages = [
+      new SystemMessage(GENERATE_MILESTONE_CONTEXT_PROMPT),
+      new HumanMessage(userMessage),
+    ];
+
+    const response = await model.invoke(langchainMessages);
+    return (response.content as string).trim();
   }
 
   async generateChatName(messages: ChatMessage[]): Promise<string> {

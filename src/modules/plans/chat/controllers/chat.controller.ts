@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Param,
   ParseUUIDPipe,
   Post,
@@ -40,6 +41,7 @@ import { ActiveProjectByIdPipe } from '../../projects/pipes/active-project-by-id
 @Controller('projects/:projectId/chats')
 @UseGuards(JwtAuthGuard)
 export class ChatController {
+  private readonly logger = new Logger(ChatController.name);
   readonly logoPath: string;
 
   constructor(
@@ -243,6 +245,13 @@ export class ChatController {
           ...(chatName ? { chatName } : {}),
         };
         res.write(`data: ${JSON.stringify(doneEvent)}\n\n`);
+      }
+      if (accumulated && chat.context?.entityId) {
+        this.chatService
+          .updateMilestoneContextAfterChat(chatId)
+          .catch((err) =>
+            this.logger.error('Failed to update milestone context', err),
+          );
       }
     } catch (error) {
       let messageId: string | null = null;

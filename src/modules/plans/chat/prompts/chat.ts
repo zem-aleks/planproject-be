@@ -126,6 +126,46 @@ const SECTION_UNLOCK_TOOL_GUIDELINES = `## Section Unlock & Data Tools
 - Use when the user wants to correct or modify audience analysis information.
 - Updates one field at a time (tam, sam, som, auditoryDemands, auditoryPains, differentiation, auditoryChannels).`;
 
+const MILESTONE_ACTION_TOOL_GUIDELINES = `## Milestone, Step & Task Action Tools
+You have tools to complete and update milestones, steps, and tasks directly.
+
+### \`complete_step\` — toggle a step's completion
+- Use when the user says they've finished a step or wants to mark/unmark it.
+- Toggles the current status (completed ↔ not completed).
+- Load milestones first to see step IDs.
+
+### \`complete_milestone\` — mark a milestone as done
+- Use when the user confirms they've completed a milestone.
+- Provide a brief summary of what was achieved as the \`message\`.
+- Does NOT require all steps to be completed first.
+
+### \`complete_task\` — mark a task as done
+- Use when the user confirms they've finished a task.
+- Load tasks first to get the task ID.
+
+### \`load_tasks\` — load tasks for a milestone
+- Use when the user asks about tasks, or before completing/updating a task.
+- Pass the \`milestoneId\` to get all tasks for that milestone.
+
+### \`update_milestone\` — update a milestone field
+- Fields: \`title\`, \`description\`, \`definitionOfDone\`, \`usefulResources\`, \`context\`.
+- **\`context\`** is special: use it to record decisions made, progress notes, blockers, approach changes, or any important information the user should see when they open the milestone. Update it whenever the conversation produces actionable insights or decisions relevant to the milestone.
+- Load milestones first to get the ID.
+
+### \`update_step\` — update a step field
+- Fields: \`title\`, \`description\`.
+- Load milestones first to get milestone and step IDs.
+
+### \`update_task\` — update a task field
+- Fields: \`title\`, \`description\`, \`definitionOfDone\`, \`usefulResources\`, \`examples\`.
+- Load tasks first to get the task ID.
+
+### Milestone context best practices
+- Context is a tiny glanceable note — MAX 3 bullet points.
+- Only record: active blockers, decisions that change approach, critical next step.
+- Do NOT record completed items, progress counts, or obvious info from the milestone description.
+- Replace outdated bullets rather than appending. Keep it to 3 max.`;
+
 export function buildChatSystemPrompt(params: {
   soul: string;
   context: ChatContext | null;
@@ -146,6 +186,8 @@ export function buildChatSystemPrompt(params: {
     LOOKUP_TOOL_GUIDELINES,
     '',
     SECTION_UNLOCK_TOOL_GUIDELINES,
+    '',
+    MILESTONE_ACTION_TOOL_GUIDELINES,
   ];
 
   if (params.entityDetails) {
@@ -158,3 +200,15 @@ export function buildChatSystemPrompt(params: {
 }
 
 export const GENERATE_CHAT_NAME_PROMPT = `Generate a short, descriptive name (3-6 words) for this chat conversation based on the messages. The name should capture the main topic discussed. Return ONLY the name, nothing else. No quotes, no punctuation at the end.`;
+
+export const GENERATE_MILESTONE_CONTEXT_PROMPT = `You are updating a milestone's context — a tiny status note the user sees at a glance.
+
+Rules:
+- MAX 3 bullet points. Ruthlessly cut anything that isn't critical.
+- Each bullet: one short sentence, no fluff.
+- Only include: active blockers, key decisions that change approach, critical next step.
+- Drop completed items — they're already tracked elsewhere.
+- Drop obvious/generic info the user already knows from the milestone description.
+- If nothing meaningful changed, return the existing context unchanged.
+- Replace outdated bullets rather than appending — keep it to 3 max.
+- Return ONLY the context text. No labels, no quotes.`;

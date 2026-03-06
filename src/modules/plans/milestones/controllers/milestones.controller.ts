@@ -134,6 +134,7 @@ export class MilestonesController {
         startedAt: new Date(),
         completeMessage: null,
         completedAt: null,
+        context: null,
       })),
     );
 
@@ -235,6 +236,7 @@ export class MilestonesController {
           startedAt: new Date(),
           completeMessage: null,
           completedAt: null,
+          context: null,
         };
       }),
     );

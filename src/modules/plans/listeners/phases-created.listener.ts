@@ -53,6 +53,7 @@ export class PhasesCreatedListener {
             startedAt: new Date(),
             completeMessage: null,
             completedAt: null,
+            context: null,
           })),
         );
 
@@ -121,6 +122,7 @@ export class PhasesCreatedListener {
           startedAt: new Date(),
           completeMessage: null,
           completedAt: null,
+          context: null,
         })),
       );
       await this.phasesService.updateManyPartial(

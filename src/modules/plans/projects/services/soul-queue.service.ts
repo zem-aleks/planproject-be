@@ -476,6 +476,7 @@ export class SoulQueueService {
             startedAt: new Date(),
             completeMessage: null,
             completedAt: null,
+            context: null,
           };
         }),
       );

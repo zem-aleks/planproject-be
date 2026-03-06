@@ -51,6 +51,9 @@ export class Milestone {
   steps: MilestoneStep[];
 
   @Column({ nullable: true, type: 'text', default: null })
+  context: string | null;
+
+  @Column({ nullable: true, type: 'text', default: null })
   completeMessage: string | null;
 
   @Column({ type: 'timestamp', nullable: true, default: null })

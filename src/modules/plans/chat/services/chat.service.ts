@@ -19,6 +19,8 @@ import { MilestonesService } from '../../milestones/services/milestones.service'
 import { ProjectsService } from '../../projects/services/projects.service';
 import { CompetitorsService } from '../../../competitors/services/competitors.service';
 import { AuditoryService } from '../../../auditory/services/auditory.service';
+import { TasksService } from '../../tasks/services/tasks.service';
+import { getProjectDay } from '../../projects/helpers/getProjectDay';
 
 @Injectable()
 export class ChatService {
@@ -36,6 +38,7 @@ export class ChatService {
     private readonly projectsService: ProjectsService,
     private readonly competitorsService: CompetitorsService,
     private readonly auditoryService: AuditoryService,
+    private readonly tasksService: TasksService,
   ) {}
 
   async getAllByProjectId(params: {
@@ -134,10 +137,20 @@ export class ChatService {
               : 'No milestones found for this project.';
           }
           return milestones
-            .map(
-              (m) =>
-                `- **${m.title}** (${m.status}) — ${m.description}. Definition of done: ${m.definitionOfDone}. ~${m.daysNeeded} days.`,
-            )
+            .map((m) => {
+              const lines = [
+                `- **${m.title}** (id: ${m.id}, ${m.status}) — ${m.description}. Definition of done: ${m.definitionOfDone}. ~${m.daysNeeded} days.`,
+              ];
+              if (m.context) {
+                lines.push(`  Context: ${m.context}`);
+              }
+              if (m.steps.length > 0) {
+                lines.push(
+                  `  Steps: ${m.steps.map((s) => `${s.completed ? '[x]' : '[ ]'} ${s.title} (id: ${s.id})`).join('; ')}`,
+                );
+              }
+              return lines.join('\n');
+            })
             .join('\n');
         }
         case 'load_chats': {
@@ -294,10 +307,169 @@ export class ChatService {
           });
           return `Auditory ${field} updated successfully.`;
         }
+        case 'load_tasks': {
+          const milestoneId = args.milestoneId as string;
+          const tasks =
+            await this.tasksService.getAllByMilestoneId(milestoneId);
+          if (tasks.length === 0) {
+            return 'No tasks found for this milestone.';
+          }
+          return tasks
+            .map(
+              (t) =>
+                `- **${t.title}** (id: ${t.id}, ${t.status}) — ${t.description}. Definition of done: ${t.definitionOfDone}.`,
+            )
+            .join('\n');
+        }
+        case 'complete_step': {
+          const milestoneId = args.milestoneId as string;
+          const stepId = args.stepId as string;
+          const milestone =
+            await this.milestonesService.getOneById(milestoneId);
+          if (!milestone) return `Milestone not found: ${milestoneId}`;
+          const stepIndex = milestone.steps.findIndex((s) => s.id === stepId);
+          if (stepIndex === -1) return `Step not found: ${stepId}`;
+          milestone.steps = milestone.steps.map((step, i) =>
+            i === stepIndex ? { ...step, completed: !step.completed } : step,
+          );
+          await this.milestonesService.update(milestone);
+          const toggled = milestone.steps[stepIndex];
+          return `Step "${toggled.title}" marked as ${toggled.completed ? 'completed' : 'not completed'}.`;
+        }
+        case 'complete_milestone': {
+          const milestoneId = args.milestoneId as string;
+          const message = args.message as string;
+          const milestone =
+            await this.milestonesService.getOneById(milestoneId);
+          if (!milestone) return `Milestone not found: ${milestoneId}`;
+          if (milestone.status === 'completed')
+            return 'Milestone is already completed.';
+          const projectDay = getProjectDay(project);
+          await this.milestonesService.completeMilestone({
+            milestone,
+            message,
+            projectDay,
+          });
+          return `Milestone "${milestone.title}" completed successfully.`;
+        }
+        case 'complete_task': {
+          const taskId = args.taskId as string;
+          const message = args.message as string;
+          const task = await this.tasksService.getOneById(taskId);
+          if (!task) return `Task not found: ${taskId}`;
+          if (task.status === 'completed') return 'Task is already completed.';
+          await this.tasksService.completeTask({ task, message });
+          return `Task "${task.title}" completed successfully.`;
+        }
+        case 'update_milestone': {
+          const milestoneId = args.milestoneId as string;
+          const field = args.field as
+            | 'title'
+            | 'description'
+            | 'definitionOfDone'
+            | 'usefulResources'
+            | 'context';
+          const value = args.value as string;
+          const milestone =
+            await this.milestonesService.getOneById(milestoneId);
+          if (!milestone) return `Milestone not found: ${milestoneId}`;
+          milestone[field] = value;
+          await this.milestonesService.update(milestone);
+          return `Milestone ${field} updated successfully.`;
+        }
+        case 'update_step': {
+          const milestoneId = args.milestoneId as string;
+          const stepId = args.stepId as string;
+          const field = args.field as string;
+          const value = args.value as string;
+          const milestone =
+            await this.milestonesService.getOneById(milestoneId);
+          if (!milestone) return `Milestone not found: ${milestoneId}`;
+          const stepIdx = milestone.steps.findIndex((s) => s.id === stepId);
+          if (stepIdx === -1) return `Step not found: ${stepId}`;
+          milestone.steps = milestone.steps.map((step, i) =>
+            i === stepIdx ? { ...step, [field]: value } : step,
+          );
+          await this.milestonesService.update(milestone);
+          return `Step ${field} updated successfully.`;
+        }
+        case 'update_task': {
+          const taskId = args.taskId as string;
+          const field = args.field as
+            | 'title'
+            | 'description'
+            | 'definitionOfDone'
+            | 'usefulResources'
+            | 'examples';
+          const value = args.value as string;
+          const task = await this.tasksService.getOneById(taskId);
+          if (!task) return `Task not found: ${taskId}`;
+          task[field] = value;
+          await this.tasksService.update(task);
+          return `Task ${field} updated successfully.`;
+        }
         default:
           return `Unknown tool: ${name}`;
       }
     };
+  }
+
+  private async resolveEntityDetails(
+    context: ChatContext | null,
+  ): Promise<string | undefined> {
+    if (!context?.entityId) return undefined;
+
+    switch (context.type) {
+      case 'milestone': {
+        const milestone = await this.milestonesService.getOneById(
+          context.entityId,
+        );
+        if (!milestone) return undefined;
+        const lines = [
+          `**Milestone: ${milestone.title}** (id: ${milestone.id}, ${milestone.status})`,
+          `- Description: ${milestone.description}`,
+          `- Definition of done: ${milestone.definitionOfDone}`,
+          `- Days needed: ~${milestone.daysNeeded}`,
+        ];
+        if (milestone.context) lines.push(`- Context: ${milestone.context}`);
+        if (milestone.usefulResources)
+          lines.push(`- Resources: ${milestone.usefulResources}`);
+        if (milestone.steps.length > 0) {
+          lines.push(`- Steps:`);
+          for (const step of milestone.steps) {
+            lines.push(
+              `  - ${step.completed ? '[x]' : '[ ]'} ${step.title} (id: ${step.id}) — ${step.description}`,
+            );
+          }
+        }
+        return lines.join('\n');
+      }
+      case 'task': {
+        const task = await this.tasksService.getOneById(context.entityId);
+        if (!task) return undefined;
+        const lines = [
+          `**Task: ${task.title}** (id: ${task.id}, ${task.status})`,
+          `- Description: ${task.description}`,
+          `- Definition of done: ${task.definitionOfDone}`,
+        ];
+        if (task.usefulResources)
+          lines.push(`- Resources: ${task.usefulResources}`);
+        if (task.examples) lines.push(`- Examples: ${task.examples}`);
+        return lines.join('\n');
+      }
+      case 'phase': {
+        const phase = await this.phasesService.getOneById(context.entityId);
+        if (!phase) return undefined;
+        const lines = [
+          `**Phase: ${phase.title}** (id: ${phase.id}, ${phase.status})`,
+          `- Description: ${phase.description ?? 'No description'}`,
+          `- Timeline: days ${phase.timelineStartDay}–${phase.timelineEndDay}`,
+        ];
+        return lines.join('\n');
+      }
+      default:
+        return undefined;
+    }
   }
 
   async sendMessageStream(params: {
@@ -314,12 +486,14 @@ export class ChatService {
 
     const chat = await this.getOneByIdOrThrow(params.chat.id);
     const toolExecutor = this.createToolExecutor(params.project);
+    const entityDetails = await this.resolveEntityDetails(chat.context);
 
     const stream = this.chatAiService.streamResponseWithTools(
       chat.messages,
       params.soul,
       chat.context,
       toolExecutor,
+      entityDetails,
     );
 
     return { stream };
@@ -433,6 +607,69 @@ export class ChatService {
     const name = await this.chatAiService.generateChatName(chat.messages);
     await this.chatRepository.update(chatId, { name });
     return name;
+  }
+
+  async updateMilestoneContextAfterChat(chatId: string): Promise<void> {
+    const chat = await this.getOneByIdOrThrow(chatId);
+    if (!chat.context?.entityId) {
+      this.logger.debug(
+        `Skipping milestone context update: no entityId (chat ${chatId})`,
+      );
+      return;
+    }
+    if (chat.messages.length < 2) {
+      this.logger.debug(
+        `Skipping milestone context update: <2 messages (chat ${chatId})`,
+      );
+      return;
+    }
+
+    let milestoneId: string | undefined;
+
+    if (chat.context.type === 'milestone') {
+      milestoneId = chat.context.entityId;
+    } else if (chat.context.type === 'task') {
+      const task = await this.tasksService.getOneById(chat.context.entityId);
+      if (task) milestoneId = task.milestoneId;
+    }
+
+    if (!milestoneId) {
+      this.logger.debug(
+        `Skipping milestone context update: could not resolve milestoneId (chat ${chatId}, type=${chat.context.type})`,
+      );
+      return;
+    }
+
+    const milestone = await this.milestonesService.getOneById(milestoneId);
+    if (!milestone) {
+      this.logger.debug(
+        `Skipping milestone context update: milestone not found ${milestoneId}`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `Generating milestone context update for "${milestone.title}" (${milestoneId}) from chat ${chatId}`,
+    );
+
+    const updatedContext = await this.chatAiService.generateMilestoneContext({
+      messages: chat.messages,
+      milestoneTitle: milestone.title,
+      milestoneDescription: milestone.description,
+      currentContext: milestone.context,
+    });
+
+    if (updatedContext && updatedContext !== milestone.context) {
+      milestone.context = updatedContext;
+      await this.milestonesService.update(milestone);
+      this.logger.log(
+        `Milestone context updated for "${milestone.title}" (${milestoneId})`,
+      );
+    } else {
+      this.logger.debug(
+        `Milestone context unchanged for "${milestone.title}" (${milestoneId})`,
+      );
+    }
   }
 
   async softDelete(chatId: string) {

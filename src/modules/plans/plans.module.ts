@@ -23,6 +23,7 @@ import { PlansService } from './services/plans.service';
 import { ProjectShapingStartedListener } from './listeners/project-shaping-started.listener';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { PhasesCreatedListener } from './listeners/phases-created.listener';
+import { MilestoneContextListener } from './listeners/milestone-context.listener';
 import { SoulAiService } from './projects/services/soul-ai.service';
 import { SoulQueueService } from './projects/services/soul-queue.service';
 import { ShapingModule } from '../shaping/shaping.module';
@@ -72,6 +73,7 @@ import { AuditoryModule } from '../auditory/auditory.module';
     PlansService,
     ProjectShapingStartedListener,
     PhasesCreatedListener,
+    MilestoneContextListener,
     ChatService,
     ChatAiService,
   ],
