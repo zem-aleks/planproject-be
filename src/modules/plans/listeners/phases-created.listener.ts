@@ -6,6 +6,7 @@ import { Phase } from '../phases/entities/phase.entity';
 import { MilestonesAiService } from '../milestones/services/milestones-ai.service';
 import { MilestonesService } from '../milestones/services/milestones.service';
 import { PhasesService } from '../phases/services/phases.service';
+import { ProjectsService } from '../projects/services/projects.service';
 
 @Injectable()
 export class PhasesCreatedListener {
@@ -13,6 +14,7 @@ export class PhasesCreatedListener {
     private readonly milestonesAiService: MilestonesAiService,
     private readonly milestonesService: MilestonesService,
     private readonly phasesService: PhasesService,
+    private readonly projectsService: ProjectsService,
   ) {}
 
   @OnEvent('phase.createdForProject')
@@ -81,6 +83,12 @@ export class PhasesCreatedListener {
     if (failedIds.length > 0) {
       await this.phasesService.updateManyPartial(failedIds, {
         status: 'error',
+      });
+    }
+
+    if (project.status === 'planning') {
+      await this.projectsService.updatePartial(project.id, {
+        status: 'analyzing',
       });
     }
   }

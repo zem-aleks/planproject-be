@@ -24,19 +24,19 @@ export class Phase {
   @Column({ nullable: true, type: 'varchar' })
   description: string;
 
-  @Column({ nullable: true, type: 'int' })
+  @Column({ nullable: true, type: 'real' })
   minDaysNeeded: number;
 
-  @Column({ nullable: true, type: 'int' })
+  @Column({ nullable: true, type: 'real' })
   maxDaysNeeded: number;
 
   @Column({ nullable: false })
   expertiseNeeded: string;
 
-  @Column({ nullable: true, type: 'int' })
+  @Column({ nullable: true, type: 'real' })
   timelineStartDay: number;
 
-  @Column({ nullable: true, type: 'int' })
+  @Column({ nullable: true, type: 'real' })
   timelineEndDay: number;
 
   @Column({ nullable: false, type: 'varchar', default: 'building' })

@@ -40,10 +40,10 @@ export class Task {
   @Column({ nullable: true, type: 'varchar' })
   examples: string | null;
 
-  @Column({ nullable: false, type: 'int', default: 0 })
+  @Column({ nullable: false, type: 'real', default: 0 })
   day: number;
 
-  @Column({ nullable: false, type: 'int' })
+  @Column({ nullable: false, type: 'real' })
   orderIndex: number;
 
   @Column({ nullable: false, type: 'varchar', default: 'notStarted' })

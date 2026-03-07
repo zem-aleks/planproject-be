@@ -110,6 +110,8 @@ export class ProjectsController {
 
       case 'draft':
       case 'soulDone':
+      case 'planning':
+      case 'planningError':
       case 'analyzing':
       case 'active':
       case 'completed':
@@ -142,19 +144,31 @@ export class ProjectsController {
       throw new BadRequestException('Project has no soul');
     }
 
-    await this.phasesService.deleteForProject(project.id);
-
-    const phases = await this.phasesService.generateForProject(project);
-
-    const daysNeeded = Math.max(...phases.map((p) => p.timelineEndDay));
-
-    const updatedProject = await this.projectsService.update({
-      ...project,
-      status: 'analyzing',
-      daysNeeded,
+    project.status = 'planning';
+    await this.projectsService.updatePartial(project.id, {
+      status: 'planning',
     });
 
-    return mapProjectToEntity(updatedProject, this.logoPath);
+    try {
+      await this.phasesService.deleteForProject(project.id);
+
+      const phases = await this.phasesService.generateForProject(project);
+
+      const daysNeeded = Math.max(...phases.map((p) => p.timelineEndDay));
+
+      const updatedProject = await this.projectsService.update({
+        ...project,
+        status: 'planning',
+        daysNeeded,
+      });
+
+      return mapProjectToEntity(updatedProject, this.logoPath);
+    } catch (error) {
+      await this.projectsService.updatePartial(project.id, {
+        status: 'planningError',
+      });
+      throw error;
+    }
   }
 
   @Get()

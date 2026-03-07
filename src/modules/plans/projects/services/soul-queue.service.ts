@@ -251,7 +251,7 @@ export class SoulQueueService {
               project,
             });
             const daysNeeded = Math.max(...phases.map((p) => p.timelineEndDay));
-            project.status = 'analyzing';
+            project.status = 'planning';
             project.daysNeeded = daysNeeded;
             break;
           }
