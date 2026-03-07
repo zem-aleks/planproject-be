@@ -6,12 +6,20 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from '../services/projects.service';
 import { ZodValidationPipe } from '../../../../shared/pipes/zod-validation.pipe';
-import { CREATE_PROJECT_SCHEMA, ProjectCreateData } from '../types/entity';
+import {
+  ADD_SOUL_OPERATION_SCHEMA,
+  AddSoulOperationData,
+  CREATE_PROJECT_SCHEMA,
+  ProjectCreateData,
+  REMOVE_SOUL_OPERATION_SCHEMA,
+  RemoveSoulOperationData,
+} from '../types/entity';
 import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
 import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import {
@@ -28,6 +36,11 @@ import { UserPipe } from '../../../users/pipes/user.pipe';
 import { MembershipService } from '../../../subscriptions/services/membership.service';
 import { User } from 'src/modules/users/entities/user.entity';
 import { ActiveProjectByIdPipe } from '../pipes/active-project-by-id.pipe';
+import { SoulAiService } from '../services/soul-ai.service';
+import { SoulQueueService } from '../services/soul-queue.service';
+import { ShapingService } from '../../../shaping/services/shaping.service';
+import { notReachable } from '../../../../shared/utils/notReachable';
+import { PhasesService } from '../../phases/services/phases.service';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -36,9 +49,13 @@ export class ProjectsController {
 
   constructor(
     private readonly projectsService: ProjectsService,
+    private readonly soulAiService: SoulAiService,
+    private readonly soulQueueService: SoulQueueService,
+    private readonly shapingService: ShapingService,
     private readonly plansService: PlansService,
     private readonly storageService: SupabaseStorageService,
     private readonly membershipService: MembershipService,
+    private readonly phasesService: PhasesService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
@@ -58,6 +75,85 @@ export class ProjectsController {
     );
 
     await this.plansService.activateNextMilestone(updatedProject);
+    return mapProjectToEntity(updatedProject, this.logoPath);
+  }
+
+  @Patch(':projectId/init-soul')
+  async initSoul(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    const shaping = await this.shapingService.getOneByProjectId({
+      projectId: project.id,
+      userId: project.userId,
+    });
+
+    if (!shaping) {
+      throw new BadRequestException('No shaping data');
+    }
+
+    switch (project.status) {
+      case 'soulBuilding':
+        throw new BadRequestException('Soul creation in progress...');
+
+      case 'shaping':
+      case 'soulError':
+        const projectWithSoul = await this.projectsService.generateSoul(
+          project,
+          shaping,
+        );
+        return mapProjectToEntity(projectWithSoul, this.logoPath);
+
+      case 'draft':
+      case 'soulDone':
+      case 'analyzing':
+      case 'active':
+      case 'completed':
+      case 'onHold':
+      case 'cancelled':
+        if (!project.soul) {
+          const projectWithSoul = await this.projectsService.generateSoul(
+            project,
+            shaping,
+          );
+          return mapProjectToEntity(projectWithSoul, this.logoPath);
+        }
+        throw new BadRequestException('Soul already exists!');
+
+      default:
+        return notReachable(project.status);
+    }
+  }
+
+  @Post(':projectId/build-plan')
+  async buildPlan(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (!project.soul) {
+      throw new BadRequestException('Project has no soul');
+    }
+
+    await this.phasesService.deleteForProject(project.id);
+
+    const phases = await this.phasesService.generateForProject(project);
+
+    const daysNeeded = Math.max(...phases.map((p) => p.timelineEndDay));
+
+    const updatedProject = await this.projectsService.update({
+      ...project,
+      status: 'analyzing',
+      daysNeeded,
+    });
+
     return mapProjectToEntity(updatedProject, this.logoPath);
   }
 
@@ -132,6 +228,61 @@ export class ProjectsController {
 
     await this.projectsService.updatePartial(project.id, { activated: true });
     return mapProjectToEntity({ ...project, activated: true }, this.logoPath);
+  }
+
+  @Post(':projectId/soul/queue')
+  async addToSoulQueue(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @Body(new ZodValidationPipe(ADD_SOUL_OPERATION_SCHEMA))
+    data: AddSoulOperationData,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const updated = await this.soulQueueService.addOperation(project, data);
+    return mapProjectToEntity(updated, this.logoPath);
+  }
+
+  @Delete(':projectId/soul/queue')
+  async removeFromSoulQueue(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @Body(new ZodValidationPipe(REMOVE_SOUL_OPERATION_SCHEMA))
+    data: RemoveSoulOperationData,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const updated = await this.soulQueueService.removeOperation(
+      project,
+      data.operationId,
+    );
+    return mapProjectToEntity(updated, this.logoPath);
+  }
+
+  @Post(':projectId/soul/queue/apply')
+  async applySoulQueue(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const updated = await this.soulQueueService.applyQueue(project);
+    return mapProjectToEntity(updated, this.logoPath);
+  }
+
+  @Post(':projectId/soul/queue/cancel')
+  async cancelSoulQueue(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+    const updated = await this.soulQueueService.cancelQueue(project);
+    return mapProjectToEntity(updated, this.logoPath);
   }
 
   @Delete(':projectId')

@@ -19,6 +19,7 @@ import { mapMilestoneToEntity } from '../mappers/mapMilestoneToEntity';
 import { MilestonesService } from '../services/milestones.service';
 import { PhasesService } from '../../phases/services/phases.service';
 import { ProjectsService } from '../../projects/services/projects.service';
+import { Project } from '../../projects/entities/project.entity';
 import { AuthUser } from '../../../../shared/decorators/auth.decorator';
 import { MilestonesAiService } from '../services/milestones-ai.service';
 import {
@@ -36,6 +37,8 @@ import { UserPipe } from '../../../users/pipes/user.pipe';
 import { MilestoneDetailsEntity } from '../types/entity';
 import { getProjectDay } from '../../projects/helpers/getProjectDay';
 import { User } from '../../../users/entities/user.entity';
+import { PlansService } from '../../services/plans.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Controller('milestones')
 @UseGuards(JwtAuthGuard)
@@ -46,7 +49,19 @@ export class MilestonesController {
     private readonly phasesService: PhasesService,
     private readonly projectsService: ProjectsService,
     private readonly tasksService: TasksService,
+    private readonly plansService: PlansService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private async ensureProjectActive(project: Project) {
+    if (project.status !== 'active') {
+      await this.projectsService.activate(project.id, getProjectDay(project));
+      const updatedProject = await this.projectsService.getOneByIdOrThrow(
+        project.id,
+      );
+      await this.plansService.activateNextMilestone(updatedProject);
+    }
+  }
 
   @Get('phase/:phaseId')
   async getMilestones(
@@ -121,6 +136,8 @@ export class MilestonesController {
         startedAt: new Date(),
         completeMessage: null,
         completedAt: null,
+        context: null,
+        focused: false,
       })),
     );
 
@@ -222,6 +239,8 @@ export class MilestonesController {
           startedAt: new Date(),
           completeMessage: null,
           completedAt: null,
+          context: null,
+          focused: false,
         };
       }),
     );
@@ -289,6 +308,8 @@ export class MilestonesController {
       throw new UnauthorizedException('Permissions denied');
     }
 
+    await this.ensureProjectActive(project);
+
     const stepIndex = milestone.steps.findIndex((s) => s.id === stepId);
     if (stepIndex === -1) {
       throw new NotFoundException('Step not found');
@@ -332,6 +353,8 @@ export class MilestonesController {
       throw new UnauthorizedException('Permissions denied');
     }
 
+    await this.ensureProjectActive(project);
+
     if (milestone.status === 'completed') {
       throw new BadRequestException('Milestone already completed');
     }
@@ -350,5 +373,51 @@ export class MilestonesController {
     }
 
     return mapMilestoneToEntity(completedMilestone);
+  }
+
+  @Patch(':milestoneId/toggle-focus')
+  async toggleFocus(
+    @Param('milestoneId', ParseUUIDPipe) milestoneId: string,
+    @AuthUser() user: User,
+  ) {
+    const milestone =
+      await this.milestonesService.getOneByIdOtThrow(milestoneId);
+    const project = await this.projectsService.getOneByIdOrThrow(
+      milestone.projectId,
+    );
+
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (milestone.focused) {
+      milestone.focused = false;
+      await this.milestonesService.update(milestone);
+    } else {
+      if (milestone.status === 'completed') {
+        throw new BadRequestException('Cannot focus a completed milestone');
+      }
+
+      if (milestone.status === 'notStarted') {
+        const projectDay = getProjectDay(project);
+        await this.ensureProjectActive(project);
+        await this.milestonesService.activate(milestone, projectDay);
+      }
+
+      milestone.focused = true;
+      await this.milestonesService.update(milestone);
+    }
+
+    const focused = await this.milestonesService.getFocusedMilestones(
+      project.id,
+    );
+
+    this.eventEmitter.emit('focus.changed', {
+      projectId: project.id,
+      milestoneIds: focused.map((m) => m.id),
+      milestoneTitles: focused.map((m) => m.title),
+    });
+
+    return focused.map(mapMilestoneToEntity);
   }
 }

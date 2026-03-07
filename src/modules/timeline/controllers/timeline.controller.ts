@@ -36,7 +36,8 @@ export class TimelineController {
     private readonly milestonesService: MilestonesService,
   ) {}
 
-  @Post(':projectId/extend-today') async extendToday(
+  @Post(':projectId/extend-today')
+  async extendToday(
     @Param('projectId', ProjectByIdPipe) project: Project,
     @AuthUser() user: User,
   ) {
@@ -51,33 +52,20 @@ export class TimelineController {
       });
     }
 
-    const activeMilestone = await this.milestonesService.getActiveMilestone(
-      project.id,
-    );
-
-    if (activeMilestone) {
-      throw new BadRequestException({
-        message: 'There is already an active milestone for this project.',
-        code: 'MILESTONE_ACTIVE',
-      });
-    }
-
     const status = await this.plansService.activateNextMilestone(project);
     switch (status.type) {
       case 'noMilestonesToStart':
         throw new BadRequestException({
-          message: 'Project is already completed',
-          code: 'PROJECT_COMPLETED',
+          message: 'No more milestones to start',
+          code: 'NO_MILESTONES',
         });
 
-      case 'success':
-        const activeMilestone =
-          await this.milestonesService.getOneByIdWithPhase(status.milestone.id);
-
-        return mapMilestoneToEntity({
-          ...status.milestone,
-          ...activeMilestone,
-        });
+      case 'success': {
+        // activateNextMilestone sets focused=true via activate()
+        const focusedMilestones =
+          await this.milestonesService.getFocusedMilestones(project.id);
+        return focusedMilestones.map(mapMilestoneToEntity);
+      }
 
       default:
         return notReachable(status);
@@ -134,13 +122,6 @@ export class TimelineController {
       });
     }
 
-    // if (project.status === 'completed') {
-    //   throw new BadRequestException({
-    //     message: 'Project is already completed',
-    //     code: 'PROJECT_COMPLETED',
-    //   });
-    // }
-
     const projectDay = getProjectDay(project);
     const timelinePoint = await this.timelineService.getTimelinePointOrCreate({
       projectId: project.id,
@@ -150,56 +131,59 @@ export class TimelineController {
       isTimelineEventMilestone,
     );
 
-    const activeMilestone = await this.milestonesService.getActiveMilestone(
+    // 1. Return focused milestones if any exist
+    const focusedMilestones = await this.milestonesService.getFocusedMilestones(
       project.id,
     );
 
-    console.log(activeMilestone, todayMilestoneEvents.length);
-
-    if (activeMilestone) {
-      const todayContainActiveMilestone =
-        todayMilestoneEvents.filter((e) => e.milestoneId === activeMilestone.id)
-          .length > 0;
-
-      if (!todayContainActiveMilestone) {
+    if (focusedMilestones.length > 0) {
+      // Register timeline events for focused milestones not yet tracked today
+      const trackedIds = new Set(
+        todayMilestoneEvents.map((e) => e.milestoneId),
+      );
+      const untrackedFocused = focusedMilestones.filter(
+        (m) => !trackedIds.has(m.id),
+      );
+      if (untrackedFocused.length > 0) {
         await this.timelineEventsService.registerEvents({
           projectDay,
           projectId: project.id,
-          events: [
-            {
-              type: 'milestone.continue',
-              milestoneId: activeMilestone.id,
-              comment: '',
-              createdAt: new Date(),
-            },
-          ],
+          events: untrackedFocused.map((m) => ({
+            type: 'milestone.continue' as const,
+            milestoneId: m.id,
+            comment: '',
+            createdAt: new Date(),
+          })),
         });
       }
 
-      return mapMilestoneToEntity(activeMilestone);
+      return focusedMilestones.map(mapMilestoneToEntity);
     }
 
+    // 2. No focused milestones — try to activate and focus the next one
     if (todayMilestoneEvents.length > 0) {
-      return null;
+      // Milestones were active today but all completed/unfocused — done for the day
+      return [];
     }
 
     const status = await this.plansService.activateNextMilestone(project);
     switch (status.type) {
       case 'noMilestonesToStart':
-        // throw new BadRequestException({
-        //   message: 'Project is already completed',
-        //   code: 'PROJECT_COMPLETED',
-        // });
-        return null;
+        return [];
 
-      case 'success':
-        const activeMilestone =
-          await this.milestonesService.getOneByIdWithPhase(status.milestone.id);
+      case 'success': {
+        // activateNextMilestone already sets focused=true via activate()
+        const activated = await this.milestonesService.getOneByIdWithPhase(
+          status.milestone.id,
+        );
 
-        return mapMilestoneToEntity({
-          ...status.milestone,
-          ...activeMilestone,
-        });
+        return [
+          mapMilestoneToEntity({
+            ...status.milestone,
+            ...activated,
+          }),
+        ];
+      }
 
       default:
         return notReachable(status);

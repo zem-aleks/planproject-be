@@ -17,6 +17,8 @@ export type MilestoneEntity = {
   daysNeeded: number;
   usefulResources: string | null;
   steps: MilestoneStep[];
+  context: string | null;
+  focused: boolean;
   orderIndex: number;
   status: MilestoneStatus;
   completeMessage: string | null;

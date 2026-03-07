@@ -34,18 +34,61 @@ export type TimelineEventProject =
   | { type: 'project.started'; projectId: string }
   | { type: 'project.completed'; projectId: string };
 
+export type TimelineEventFocus = {
+  type: 'focus.changed';
+  milestoneIds: string[];
+  milestoneTitles: string[];
+  createdAt: Date;
+};
+
+export type TimelineEventSoul = {
+  type: 'soul.updated';
+  description: string;
+  createdAt: Date;
+};
+
+export type TimelineEventChat = {
+  type: 'chat.created';
+  chatId: string;
+  chatName: string | null;
+  contextType: string | null;
+  contextLabel: string | null;
+  createdAt: Date;
+};
+
+export type TimelineEventTask = {
+  type: 'task.completed';
+  taskId: string;
+  taskTitle: string;
+  milestoneId: string;
+  message: string;
+  completedAt: Date;
+};
+
 export type TimelineEvent =
   | TimelineEventMilestone
   | TimelineEventPhase
-  | TimelineEventProject;
+  | TimelineEventProject
+  | TimelineEventFocus
+  | TimelineEventSoul
+  | TimelineEventChat
+  | TimelineEventTask;
 
 export type TimelineEventHydrated =
   | (TimelineEventMilestone & { milestone: MilestoneDetailsEntity })
   | (TimelineEventPhase & { phase: PhaseEntity })
-  | (TimelineEventProject & { project: ProjectEntity });
+  | (TimelineEventProject & { project: ProjectEntity })
+  | TimelineEventFocus
+  | TimelineEventSoul
+  | TimelineEventChat
+  | TimelineEventTask;
 
 export const isTimelineEventMilestone = (
   event: TimelineEvent,
 ): event is TimelineEventMilestone => {
-  return 'milestoneId' in event;
+  return (
+    event.type === 'milestone.started' ||
+    event.type === 'milestone.continue' ||
+    event.type === 'milestone.completed'
+  );
 };

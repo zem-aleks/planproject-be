@@ -6,5 +6,7 @@ export const getProjectDay = (project: Project): number => {
 };
 
 export const getProjectDayByDate = (startedAt: Date): number => {
-  return dayjs().diff(startedAt, 'days') + 1;
+  return (
+    dayjs().startOf('day').diff(dayjs(startedAt).startOf('day'), 'days') + 1
+  );
 };

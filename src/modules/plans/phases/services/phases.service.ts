@@ -164,6 +164,13 @@ export class PhasesService {
     return result;
   }
 
+  async deleteForProject(projectId: string) {
+    const phases = await this.getAll(projectId);
+    if (phases.length > 0) {
+      await this.softDeleteMany(phases.map((p) => p.id));
+    }
+  }
+
   async generateForProject(project: Project) {
     const { projectPhases } =
       await this.phasesAiService.summarizeProjectPhases(project);

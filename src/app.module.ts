@@ -27,6 +27,8 @@ import { Competitor } from './modules/competitors/entities/competitor.entity';
 import { CompetitorsModule } from './modules/competitors/competitors.module';
 import { AuditoryModule } from './modules/auditory/auditory.module';
 import { Auditory } from './modules/auditory/entities/auditory.entity';
+import { Chat } from './modules/plans/chat/entities/chat.entity';
+import { ChatMessage } from './modules/plans/chat/entities/chat-message.entity';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 
@@ -53,6 +55,8 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
             TimelinePoint,
             Competitor,
             Auditory,
+            Chat,
+            ChatMessage,
           ],
           synchronize: false,
           migrationsRun: true,

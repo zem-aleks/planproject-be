@@ -18,6 +18,13 @@ export const mapProjectToEntity = (
     shapingId: project.shapingId,
     daysNeeded: project.daysNeeded,
     activated: project.activated,
+    competitorsUnlocked: project.competitorsUnlocked,
+    auditoryUnlocked: project.auditoryUnlocked,
+    soul: project.soul,
+    soulQueue: project.soulQueue,
+    soulQueueStartedAt: project.soulQueueStartedAt,
+    soulQueueApplying: project.soulQueueApplying,
+    soulQueueError: project.soulQueueError,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'
         ? project.logoUrl
@@ -37,6 +44,13 @@ export const mapProjectToPreviewEntity = (
     startedAt: project.startedAt,
     daysNeeded: project.daysNeeded,
     activated: project.activated,
+    competitorsUnlocked: project.competitorsUnlocked,
+    auditoryUnlocked: project.auditoryUnlocked,
+    soul: project.soul,
+    soulQueue: project.soulQueue,
+    soulQueueStartedAt: project.soulQueueStartedAt,
+    soulQueueApplying: project.soulQueueApplying,
+    soulQueueError: project.soulQueueError,
     logoUrl:
       !project.logoUrl || project.logoUrl === 'loading'
         ? project.logoUrl

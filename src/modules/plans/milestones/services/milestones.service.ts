@@ -122,6 +122,7 @@ export class MilestonesService {
     milestone.status = 'completed';
     milestone.completeMessage = message;
     milestone.completedAt = new Date();
+    milestone.focused = false;
 
     this.eventEmitter.emit('milestone.completed', {
       milestoneIds: [milestone.id],
@@ -158,6 +159,7 @@ export class MilestonesService {
   async activate(milestone: Milestone, projectDay: number) {
     milestone.status = 'inProgress';
     milestone.startedAt = new Date();
+    milestone.focused = true;
     const result = await this.update(milestone);
     this.eventEmitter.emit('milestone.started', {
       milestoneId: milestone.id,
@@ -181,5 +183,24 @@ export class MilestonesService {
       where: { phaseId },
       order: { orderIndex: 'ASC' },
     });
+  }
+
+  async getFocusedMilestones(projectId: string) {
+    return this.repository.find({
+      where: { projectId, focused: true },
+      order: { orderIndex: 'ASC' },
+      relations: ['phase'],
+    });
+  }
+
+  async setFocus(milestoneIds: string[]) {
+    await this.repository.update(milestoneIds, { focused: true });
+  }
+
+  async clearFocus(projectId: string) {
+    await this.repository.update(
+      { projectId, focused: true },
+      { focused: false },
+    );
   }
 }

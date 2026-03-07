@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ShapingService } from './services/shaping.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ShapingController } from './controllers/shaping.controller';
@@ -15,11 +15,11 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     TypeOrmModule.forFeature([Shaping]),
     SupabaseModule,
     UsersModule,
-    PlansModule,
+    forwardRef(() => PlansModule),
     SubscriptionsModule,
   ],
   controllers: [ShapingController, ShapingPublicController],
   providers: [ShapingService, ShapingAiService],
-  exports: [],
+  exports: [ShapingService],
 })
 export class ShapingModule {}

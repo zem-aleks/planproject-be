@@ -23,13 +23,25 @@ export type ModelType =
   | 'gemini-2.5-flash'
   | 'qwen'
   | 'deepseek'
-  | 'claude-opus-4-1';
+  | 'claude-opus-4-6'
+  | 'claude-sonnet-4-6';
 
 export const getModel = (model: ModelType, temperature: number) => {
   switch (model) {
-    case 'claude-opus-4-1':
+    case 'claude-opus-4-6':
       return new ChatAnthropic({
-        model: 'claude-opus-4-1',
+        model: 'claude-opus-4-6',
+        maxTokens: 16384,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        topP: undefined,
+        temperature,
+      });
+
+    case 'claude-sonnet-4-6':
+      return new ChatAnthropic({
+        model: 'claude-sonnet-4-6',
+        maxTokens: 16384,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         topP: undefined,
@@ -56,6 +68,10 @@ export const getModel = (model: ModelType, temperature: number) => {
 
     case 'gpt-5-nano':
     case 'gpt-5-mini':
+      return new ChatOpenAI({
+        model,
+      });
+
     case 'gpt-4.1':
     case 'gpt-4.1-mini':
     case 'gpt-4.1-nano':

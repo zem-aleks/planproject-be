@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Task } from '../entities/task.entity';
 import { TasksAiService } from './tasks-ai.service';
 import { Milestone } from '../../milestones/entities/milestone.entity';
@@ -13,9 +14,7 @@ export class TasksService {
     @InjectRepository(Task)
     private readonly repository: Repository<Task>,
     private readonly tasksAiService: TasksAiService,
-    // private readonly phasesService: PhasesService,
-    // private readonly projectsService: ProjectsService,
-    // private readonly milestonesService: MilestonesService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -121,6 +120,16 @@ export class TasksService {
     task.status = 'completed';
     task.completeMessage = message;
     task.completedAt = new Date();
-    return this.update(task);
+    const result = await this.update(task);
+
+    this.eventEmitter.emit('task.completed', {
+      taskId: task.id,
+      taskTitle: task.title,
+      milestoneId: task.milestoneId,
+      projectId: task.projectId,
+      message,
+    });
+
+    return result;
   }
 }

@@ -23,23 +23,47 @@ import { PlansService } from './services/plans.service';
 import { ProjectShapingStartedListener } from './listeners/project-shaping-started.listener';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { PhasesCreatedListener } from './listeners/phases-created.listener';
+import { MilestoneContextListener } from './listeners/milestone-context.listener';
+import { SoulAiService } from './projects/services/soul-ai.service';
+import { SoulQueueService } from './projects/services/soul-queue.service';
+import { ShapingModule } from '../shaping/shaping.module';
+import { Chat } from './chat/entities/chat.entity';
+import { ChatMessage } from './chat/entities/chat-message.entity';
+import { ChatController } from './chat/controllers/chat.controller';
+import { ChatService } from './chat/services/chat.service';
+import { ChatAiService } from './chat/services/chat-ai.service';
+import { CompetitorsModule } from '../competitors/competitors.module';
+import { AuditoryModule } from '../auditory/auditory.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Project, Phase, Milestone, Task]),
+    TypeOrmModule.forFeature([
+      Project,
+      Phase,
+      Milestone,
+      Task,
+      Chat,
+      ChatMessage,
+    ]),
     UsersModule,
     SupabaseModule,
     forwardRef(() => SubscriptionsModule),
+    forwardRef(() => ShapingModule),
+    forwardRef(() => CompetitorsModule),
+    forwardRef(() => AuditoryModule),
   ],
   controllers: [
     ProjectsController,
     PhasesController,
     MilestonesController,
     TasksController,
+    ChatController,
   ],
   providers: [
     ProjectsService,
     ProjectsAiService,
+    SoulAiService,
+    SoulQueueService,
     PhasesService,
     PhasesAiService,
     MilestonesService,
@@ -49,6 +73,9 @@ import { PhasesCreatedListener } from './listeners/phases-created.listener';
     PlansService,
     ProjectShapingStartedListener,
     PhasesCreatedListener,
+    MilestoneContextListener,
+    ChatService,
+    ChatAiService,
   ],
   exports: [
     ProjectsService,

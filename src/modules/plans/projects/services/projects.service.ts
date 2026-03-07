@@ -1,16 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
 import * as dayjs from 'dayjs';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Shaping } from '../../../shaping/entities/shaping.entity';
+import { SoulAiService } from './soul-ai.service';
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     @InjectRepository(Project)
     private readonly repository: Repository<Project>,
     private eventEmitter: EventEmitter2,
+    private readonly soulAiService: SoulAiService,
   ) {}
 
   async create(
@@ -97,11 +102,41 @@ export class ProjectsService {
       logoUrl: null,
       daysNeeded: null,
       completedAt: null,
+      soul: null,
+      soulQueue: [],
+      soulQueueStartedAt: null,
+      soulQueueApplying: false,
+      soulQueueError: null,
       activated: false,
+      competitorsUnlocked: false,
+      auditoryUnlocked: false,
     });
   }
 
   async activatedProjectsCount(userId: string) {
     return this.repository.count({ where: { userId, activated: true } });
+  }
+
+  async generateSoul(project: Project, shaping: Shaping): Promise<Project> {
+    try {
+      await this.updatePartial(project.id, {
+        status: 'soulBuilding',
+      });
+      const soul = await this.soulAiService.generateSoul(project, shaping);
+      await this.updatePartial(project.id, {
+        soul: soul,
+        status: 'soulDone',
+      });
+      return { ...project, soul, status: 'soulDone' };
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate soul for project ${project.id}`,
+        error instanceof Error ? error.stack : error,
+      );
+      await this.updatePartial(project.id, {
+        status: 'soulError',
+      });
+      return { ...project, status: 'soulError' };
+    }
   }
 }

@@ -76,6 +76,12 @@ export class TimelineEventsService {
               project: mapProjectToEntity(project, this.logoPath),
             };
 
+          case 'focus.changed':
+          case 'soul.updated':
+          case 'chat.created':
+          case 'task.completed':
+            return event;
+
           default:
             return notReachable(event);
         }

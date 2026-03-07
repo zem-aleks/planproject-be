@@ -35,7 +35,7 @@ export class Milestone {
   @Column({ nullable: false, type: 'varchar' })
   definitionOfDone: string;
 
-  @Column({ nullable: false, type: 'int' })
+  @Column({ nullable: false, type: 'real' })
   daysNeeded: number;
 
   @Column({ nullable: false, type: 'int' })
@@ -49,6 +49,12 @@ export class Milestone {
 
   @Column({ type: 'simple-json', default: '[]' })
   steps: MilestoneStep[];
+
+  @Column({ nullable: true, type: 'text', default: null })
+  context: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  focused: boolean;
 
   @Column({ nullable: true, type: 'text', default: null })
   completeMessage: string | null;
