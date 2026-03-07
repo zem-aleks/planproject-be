@@ -19,6 +19,9 @@ export class TimelinePoint {
   @Column({ nullable: false, type: 'int' })
   projectDay: number;
 
+  @Column({ nullable: false, type: 'date' })
+  date: string;
+
   @Column({ nullable: false, type: 'simple-json' })
   events: TimelineEvent[];
 
