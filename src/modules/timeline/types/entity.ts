@@ -6,6 +6,7 @@ export type TimelinePointEntity = {
   id: string;
   projectId: string;
   projectDay: number;
+  date: string;
   createdAt: Date;
   updatedAt: Date;
   events: TimelineEventHydrated[];

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
 import { TimelinePoint } from '../entities/timeline-point.entity';
 import { TimelineEvent } from '../types/entity';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class TimelineService {
@@ -28,30 +29,30 @@ export class TimelineService {
   async getProjectHistory(projectId: string) {
     return this.repository.find({
       where: { projectId },
-      order: { projectDay: 'ASC' },
+      order: { date: 'ASC' },
     });
   }
 
   async getTimelinePoint({
     projectId,
-    projectDay,
+    date,
   }: {
     projectId: string;
-    projectDay: number;
+    date: string;
   }) {
-    return this.repository.findOne({ where: { projectId, projectDay } });
+    return this.repository.findOne({ where: { projectId, date } });
   }
 
   async getPreviousTimelinePoint({
     projectId,
-    projectDay,
+    date,
   }: {
     projectId: string;
-    projectDay: number;
+    date: string;
   }) {
-    // TODO: Possible bug, check the order!!!!!
     return this.repository.findOne({
-      where: { projectId, projectDay: LessThan(projectDay) },
+      where: { projectId, date: LessThan(date) },
+      order: { date: 'DESC' },
     });
   }
 
@@ -86,15 +87,18 @@ export class TimelineService {
   async createTimelinePoint({
     projectId,
     projectDay,
+    date,
     events,
   }: {
     projectId: string;
     projectDay: number;
+    date: string;
     events: TimelineEvent[];
   }) {
     return this.create({
       projectId,
       projectDay,
+      date,
       events,
     });
   }
@@ -103,11 +107,19 @@ export class TimelineService {
     projectId: string;
     projectDay: number;
   }) {
-    const existingPoint = await this.getTimelinePoint(data);
+    const date = dayjs().format('YYYY-MM-DD');
+    const existingPoint = await this.getTimelinePoint({
+      projectId: data.projectId,
+      date,
+    });
     if (existingPoint) {
       return existingPoint;
     }
 
-    return this.createTimelinePoint({ ...data, events: [] });
+    return this.createTimelinePoint({
+      ...data,
+      date,
+      events: [],
+    });
   }
 }
