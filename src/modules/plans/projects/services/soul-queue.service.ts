@@ -54,9 +54,7 @@ export class SoulQueueService {
     const operation: SoulOperation = { ...data, id: randomUUID() };
     project.soulQueue = [...project.soulQueue, operation];
 
-    if (!project.soulQueueStartedAt) {
-      project.soulQueueStartedAt = new Date();
-    }
+    project.soulQueueStartedAt = new Date();
 
     return this.repository.save(project);
   }
@@ -308,7 +306,11 @@ export class SoulQueueService {
       await this.dataSource
         .createQueryBuilder()
         .update(Project)
-        .set({ soulQueueApplying: false, soulQueueError: errorMessage })
+        .set({
+          soulQueueApplying: false,
+          soulQueueStartedAt: null,
+          soulQueueError: errorMessage,
+        })
         .where('id = :id', { id: project.id })
         .execute();
       throw error;
