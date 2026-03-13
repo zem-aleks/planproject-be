@@ -7,18 +7,38 @@ import { ConfigService } from '@nestjs/config';
 export class ProjectsAiService {
   constructor(private readonly configService: ConfigService) {}
 
-  async generateLogo(project: Project): Promise<string | null> {
+  private getOpenai() {
     const openaiKey = this.configService.get<string>('OPENAI_API_KEY');
     const openaiOrgId = this.configService.get<string>('OPENAI_ORG_ID');
     if (!openaiKey) {
       throw new Error('No API KEY');
     }
 
-    const openai = new OpenAI({
+    return new OpenAI({
       apiKey: openaiKey,
       organization: openaiOrgId,
     });
+  }
 
+  private async generateImage(prompt: string): Promise<string | null> {
+    const openai = this.getOpenai();
+
+    const response = await openai.images.generate({
+      model: 'gpt-image-1-mini',
+      prompt,
+      n: 1,
+      background: 'auto',
+      size: '1024x1024',
+    });
+
+    if (!response.data) {
+      return null;
+    }
+
+    return response.data[0].b64_json || null;
+  }
+
+  async generateLogo(project: Project): Promise<string | null> {
     const prompt = `Generate a logo for this project idea:
 Title: ${project.title}
 Description: ${project.description}
@@ -27,25 +47,33 @@ Context: ${project.summary}
 Make image in minimalistic style, with simple shapes and limited colors.
 Don't include any text in the image.
 Make it as simple, cool and recognizable.
-Never use human parts, like head, hands, brain or smiles. 
+Never use human parts, like head, hands, brain or smiles.
 `;
 
-    const response = await openai.images.generate({
-      model: 'gpt-image-1-mini',
-      prompt,
-      n: 1,
-      // response_format: 'b64_json',
-      background: 'auto',
-      size: '1024x1024',
-    });
+    return this.generateImage(prompt);
+  }
 
-    console.log(response);
+  async regenerateLogo(project: Project): Promise<string | null> {
+    const soul = project.soul;
 
-    if (!response.data) {
-      return null;
-    }
+    const workstreams = soul?.workstreams?.map((w) => w.name).join(', ');
 
-    return response.data[0].b64_json || null;
+    const outcomes = soul?.desiredOutcomes?.map((o) => o.outcome).join(', ');
+
+    const prompt = `Generate an updated logo for this project:
+Title: ${project.title}
+Summary: ${soul?.summary || project.summary}
+Domain: ${soul?.domain || 'general'}
+Key workstreams: ${workstreams || 'N/A'}
+Desired outcomes: ${outcomes || 'N/A'}
+
+Make image in minimalistic style, with simple shapes and limited colors.
+Don't include any text in the image.
+Make it as simple, cool and recognizable.
+Never use human parts, like head, hands, brain or smiles.
+`;
+
+    return this.generateImage(prompt);
 
     //     const generateImageTool = new DynamicTool({
     //       name: 'generate_image',

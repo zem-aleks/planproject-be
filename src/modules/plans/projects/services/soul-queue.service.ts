@@ -149,7 +149,8 @@ export class SoulQueueService {
 
     try {
       const soul: ProjectSoul = JSON.parse(JSON.stringify(project.soul));
-      const changeDescriptions: string[] = [];
+      const patchDescriptions: string[] = [];
+      const aiChangeDescriptions: string[] = [];
 
       for (const op of operationsToProcess) {
         switch (op.type) {
@@ -165,7 +166,7 @@ export class SoulQueueService {
               chosen: op.chosenOption,
               rationale: null,
             });
-            changeDescriptions.push(
+            patchDescriptions.push(
               `The open question "${op.topic}" was answered with: "${op.chosenOption}".`,
             );
             break;
@@ -198,7 +199,7 @@ export class SoulQueueService {
                 rationale: null,
               });
             }
-            changeDescriptions.push(
+            patchDescriptions.push(
               `The assumption "${op.assumption}" was confirmed by the user.`,
             );
             break;
@@ -213,7 +214,7 @@ export class SoulQueueService {
             break;
           }
           case 'apply_proposal': {
-            changeDescriptions.push(op.description);
+            aiChangeDescriptions.push(op.description);
             break;
           }
           case 'apply_plan_proposal': {
@@ -221,7 +222,7 @@ export class SoulQueueService {
               await this.applyPlanUpdate(project, op.changes.plan);
             }
             if (op.changes.soul) {
-              changeDescriptions.push(op.changes.soul);
+              aiChangeDescriptions.push(op.changes.soul);
             }
             break;
           }
@@ -257,11 +258,13 @@ export class SoulQueueService {
         processedOpIds.push(op.id);
       }
 
+      const allDescriptions = [...patchDescriptions, ...aiChangeDescriptions];
+
       let finalSoul: ProjectSoul;
 
-      if (changeDescriptions.length > 0) {
+      if (aiChangeDescriptions.length > 0) {
         const combinedDescription =
-          changeDescriptions.join(' ') +
+          aiChangeDescriptions.join(' ') +
           ' All direct mutations (removing items, adding decisions) have already been applied. Now check for ripple effects: do these changes affect constraints, assumptions, workstreams, resources, open questions, or other sections? Apply any necessary updates to those sections only.';
 
         finalSoul = await this.soulAiService.generateUpdatedSoul(
@@ -277,6 +280,7 @@ export class SoulQueueService {
           id: project.id,
         });
 
+        freshProject.title = finalSoul.name;
         freshProject.soul = finalSoul;
         freshProject.soulQueue = freshProject.soulQueue.filter(
           (op) => !processedOpIds.includes(op.id),
@@ -291,10 +295,10 @@ export class SoulQueueService {
 
         const saved = await manager.save(Project, freshProject);
 
-        if (changeDescriptions.length > 0) {
+        if (allDescriptions.length > 0) {
           this.eventEmitter.emit('soul.updated', {
             projectId: project.id,
-            description: changeDescriptions.join(' '),
+            description: allDescriptions.join(' '),
           });
         }
 

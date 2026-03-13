@@ -255,7 +255,7 @@ export class ShapingPublicController {
     const { followUpQuestion, followUpAnswers, score, assistantComment } =
       await this.shapingAiService.processShapingData(
         shapingWithMessage,
-        'gpt-4o-mini',
+        'claude-sonnet-4-6',
       );
 
     const updatedShaping = await this.shapingService.addAssistantMessage({

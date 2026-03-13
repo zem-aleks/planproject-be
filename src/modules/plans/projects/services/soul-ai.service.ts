@@ -43,7 +43,7 @@ Extract the project profile.`,
     currentSoul: ProjectSoul,
     changeDescription: string,
   ): Promise<ProjectSoul> {
-    const model = getModel('gpt-4.1', 0.3);
+    const model = getModel('claude-sonnet-4-6', 0.3);
     const structuredModel = model.withStructuredOutput<ProjectSoul>(
       PROJECT_SOUL_SCHEMA,
       { name: 'ProjectSoul' },

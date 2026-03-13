@@ -124,10 +124,11 @@ export class ProjectsService {
       });
       const soul = await this.soulAiService.generateSoul(project, shaping);
       await this.updatePartial(project.id, {
+        title: soul.name,
         soul: soul,
         status: 'soulDone',
       });
-      return { ...project, soul, status: 'soulDone' };
+      return { ...project, title: soul.name, soul, status: 'soulDone' };
     } catch (error) {
       this.logger.error(
         `Failed to generate soul for project ${project.id}`,

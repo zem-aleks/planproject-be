@@ -137,7 +137,7 @@ export class ShapingController {
     const { followUpQuestion, followUpAnswers, assistantComment, score } =
       await this.shapingAiService.processShapingData(
         updatedShaping,
-        'gpt-4o-mini',
+        'claude-sonnet-4-6',
       );
 
     const shapingWithMessage = await this.shapingService.addAssistantMessage({
@@ -170,7 +170,7 @@ export class ShapingController {
     const { followUpQuestion, followUpAnswers, score, assistantComment } =
       await this.shapingAiService.processShapingData(
         shapingWithMessage,
-        'gpt-4o-mini',
+        'claude-sonnet-4-6',
       );
 
     const updatedShaping = await this.shapingService.addAssistantMessage({

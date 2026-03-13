@@ -41,6 +41,7 @@ import { SoulQueueService } from '../services/soul-queue.service';
 import { ShapingService } from '../../../shaping/services/shaping.service';
 import { notReachable } from '../../../../shared/utils/notReachable';
 import { PhasesService } from '../../phases/services/phases.service';
+import { ProjectsAiService } from '../services/projects-ai.service';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -56,6 +57,7 @@ export class ProjectsController {
     private readonly storageService: SupabaseStorageService,
     private readonly membershipService: MembershipService,
     private readonly phasesService: PhasesService,
+    private readonly projectsAiService: ProjectsAiService,
   ) {
     this.logoPath = this.storageService.getBucketUrl('logo') + '/';
   }
@@ -168,6 +170,65 @@ export class ProjectsController {
         status: 'planningError',
       });
       throw error;
+    }
+  }
+
+  @Patch(':projectId/logo')
+  async regenerateLogo(
+    @Param('projectId', ActiveProjectByIdPipe) project: Project,
+    @AuthUser() user: User,
+  ) {
+    if (project.userId !== user.id) {
+      throw new UnauthorizedException('Permissions denied');
+    }
+
+    if (!project.soul) {
+      throw new BadRequestException('Project has no soul');
+    }
+
+    if (project.logoUrl === 'loading') {
+      throw new BadRequestException('Logo generation is already in progress');
+    }
+
+    await this.projectsService.updatePartial(project.id, {
+      logoUrl: 'loading',
+    });
+
+    const base64 = await this.projectsAiService.regenerateLogo(project);
+    if (!base64) {
+      await this.projectsService.updatePartial(project.id, { logoUrl: null });
+      return mapProjectToEntity({ ...project, logoUrl: null }, this.logoPath);
+    }
+
+    const buffer = Buffer.from(base64, 'base64');
+    const imageName = `${project.id}-${Math.floor(Math.random() * 10000)}.png`;
+    const uploadState = await this.storageService.upload({
+      bucketId: 'logo',
+      contentType: 'image/png',
+      name: imageName,
+      fileBody: buffer,
+    });
+
+    switch (uploadState.type) {
+      case 'error': {
+        await this.projectsService.updatePartial(project.id, {
+          logoUrl: null,
+        });
+        return mapProjectToEntity({ ...project, logoUrl: null }, this.logoPath);
+      }
+
+      case 'success': {
+        await this.projectsService.updatePartial(project.id, {
+          logoUrl: uploadState.url,
+        });
+        return mapProjectToEntity(
+          { ...project, logoUrl: uploadState.url },
+          this.logoPath,
+        );
+      }
+
+      default:
+        return notReachable(uploadState);
     }
   }
 
