@@ -26,6 +26,15 @@ export type ModelType =
   | 'claude-opus-4-6'
   | 'claude-sonnet-4-6';
 
+const anthropicClientOptions = () =>
+  process.env.ANTHROPIC_WORKSPACE_ID
+    ? {
+        defaultHeaders: {
+          'anthropic-workspace-id': process.env.ANTHROPIC_WORKSPACE_ID,
+        },
+      }
+    : {};
+
 export const getModel = (model: ModelType, temperature: number) => {
   switch (model) {
     case 'claude-opus-4-6':
@@ -36,6 +45,7 @@ export const getModel = (model: ModelType, temperature: number) => {
         // @ts-ignore
         topP: undefined,
         temperature,
+        clientOptions: anthropicClientOptions(),
       });
 
     case 'claude-sonnet-4-6':
@@ -46,6 +56,7 @@ export const getModel = (model: ModelType, temperature: number) => {
         // @ts-ignore
         topP: undefined,
         temperature,
+        clientOptions: anthropicClientOptions(),
       });
 
     case 'deepseek':
